@@ -1,0 +1,741 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Symptom Log</title>
+<meta name="theme-color" content="#0e1417">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Symptom Log">
+<link rel="manifest" href='data:application/manifest+json,{"name":"Symptom Log","short_name":"Symptoms","display":"standalone","start_url":"./","background_color":"%230e1417","theme_color":"%230e1417","icons":[]}'>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230e1417'/%3E%3Cpath d='M8 40 L20 40 L26 22 L34 48 L40 34 L46 34' fill='none' stroke='%233fbfa8' stroke-width='5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<style>
+:root{
+  --bg:#0e1417; --panel:#151d21; --panel2:#1b262b; --line:#26343a;
+  --text:#e6eef1; --dim:#8fa3ab; --dimmer:#5f747d;
+  --accent:#3fbfa8; --accent2:#2a8d7c;
+  --throat:#f2994a; --breath:#56a8f5; --head:#b18cf0; --energy:#7ed957;
+  --warn:#e2603f;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;background:var(--bg);color:var(--text);
+  font:15px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  padding-bottom:96px}
+h1{font-size:17px;margin:0;font-weight:600;letter-spacing:.2px}
+h2{font-size:13px;margin:0;font-weight:600;letter-spacing:.8px;text-transform:uppercase;color:var(--dim)}
+
+/* ---- header ---- */
+header{position:sticky;top:0;z-index:20;background:rgba(14,20,23,.96);
+  backdrop-filter:blur(10px);border-bottom:1px solid var(--line);padding:10px 12px 8px}
+.hrow{display:flex;align-items:center;gap:8px}
+.spacer{flex:1}
+.datenav{display:flex;align-items:center;gap:6px;margin-top:8px}
+.datenav input[type=date]{flex:1;background:var(--panel2);border:1px solid var(--line);
+  color:var(--text);border-radius:9px;padding:9px 10px;font-size:15px;font-family:inherit}
+.arrow{width:40px;height:40px;flex:0 0 40px;border-radius:9px;border:1px solid var(--line);
+  background:var(--panel2);color:var(--text);font-size:17px;cursor:pointer}
+.arrow:active{background:var(--accent2)}
+.today{font-size:12px;color:var(--dim);padding:0 4px}
+.saved{font-size:11px;color:var(--accent);opacity:0;transition:opacity .25s}
+.saved.on{opacity:1}
+
+/* ---- sections ---- */
+section{background:var(--panel);margin:10px 10px 0;border-radius:14px;border:1px solid var(--line);overflow:hidden}
+.shead{display:flex;align-items:center;gap:8px;padding:13px 14px;cursor:pointer;user-select:none}
+.shead .chev{color:var(--dimmer);font-size:12px;transition:transform .2s}
+section.open .chev{transform:rotate(90deg)}
+.sbody{display:none;padding:0 14px 14px}
+section.open .sbody{display:block}
+.badge{font-size:11px;background:var(--panel2);border:1px solid var(--line);color:var(--dim);
+  border-radius:20px;padding:2px 9px}
+.badge.filled{background:var(--accent2);border-color:var(--accent2);color:#fff}
+
+/* ---- scale 0-10 ---- */
+.field{margin-top:14px}
+.flabel{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--dim);margin-bottom:6px}
+.dot{width:8px;height:8px;border-radius:50%;flex:0 0 8px}
+.val{margin-left:auto;font-weight:600;font-size:14px;color:var(--text)}
+.scale{display:grid;grid-template-columns:repeat(11,1fr);gap:3px}
+.scale button{aspect-ratio:1/1;min-height:30px;border:1px solid var(--line);background:var(--panel2);
+  color:var(--dimmer);border-radius:7px;font-size:11px;font-weight:600;cursor:pointer;padding:0;font-family:inherit}
+.scale button.on{color:#08120f;border-color:transparent}
+.hint{display:flex;justify-content:space-between;font-size:10px;color:var(--dimmer);margin-top:3px}
+
+/* ---- chips ---- */
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.chip{border:1px solid var(--line);background:var(--panel2);color:var(--dim);border-radius:20px;
+  padding:7px 12px;font-size:13px;cursor:pointer;font-family:inherit}
+.chip.on{background:var(--accent2);border-color:var(--accent);color:#fff}
+.chip.warnchip.on{background:var(--warn);border-color:var(--warn)}
+
+/* ---- inputs ---- */
+input[type=text],input[type=number],input[type=time],textarea,select{
+  width:100%;background:var(--panel2);border:1px solid var(--line);color:var(--text);
+  border-radius:9px;padding:10px;font-size:15px;font-family:inherit}
+textarea{resize:vertical;min-height:64px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+.mini{font-size:11px;color:var(--dimmer);margin-top:4px}
+
+/* ---- lists ---- */
+.item{background:var(--panel2);border:1px solid var(--line);border-radius:11px;padding:10px 12px;margin-top:8px}
+.item .top{display:flex;align-items:center;gap:8px;font-size:13px}
+.item .t{font-weight:600}
+.item .sub{font-size:12px;color:var(--dim);margin-top:3px}
+.del{margin-left:auto;background:none;border:none;color:var(--dimmer);font-size:16px;cursor:pointer;padding:0 2px}
+.del:active{color:var(--warn)}
+.tag{font-size:10px;padding:2px 7px;border-radius:20px;border:1px solid var(--line);color:var(--dim)}
+.tag.r0{border-color:var(--energy);color:var(--energy)}
+.tag.r1{border-color:var(--throat);color:var(--throat)}
+.tag.r2{border-color:var(--warn);color:var(--warn)}
+
+.btn{background:var(--accent2);border:1px solid var(--accent);color:#fff;border-radius:9px;
+  padding:11px 14px;font-size:14px;font-weight:600;cursor:pointer;width:100%;margin-top:10px;font-family:inherit}
+.btn.ghost{background:var(--panel2);border-color:var(--line);color:var(--text);font-weight:500}
+.btn:active{opacity:.75}
+
+/* ---- chart ---- */
+.chartwrap{background:var(--panel2);border:1px solid var(--line);border-radius:11px;padding:12px 10px 8px;margin-top:10px}
+.legend{display:flex;gap:12px;flex-wrap:wrap;font-size:11px;color:var(--dim);margin-top:8px}
+.legend span{display:flex;align-items:center;gap:5px}
+
+/* ---- footer ---- */
+footer{position:fixed;bottom:0;left:0;right:0;background:rgba(14,20,23,.97);
+  backdrop-filter:blur(10px);border-top:1px solid var(--line);padding:10px 10px calc(10px + env(safe-area-inset-bottom));
+  display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;z-index:30}
+footer button{margin-top:0}
+.note{margin:14px 10px 0;font-size:11px;color:var(--dimmer);line-height:1.5;padding:0 4px}
+.warnbox{background:#2a1a14;border:1px solid #4a2b1e;color:#e8b9a4;border-radius:11px;
+  padding:11px 13px;font-size:12px;margin:10px 10px 0;line-height:1.5}
+.okbox{background:#12241f;border:1px solid #1f4438;color:#8fd8c4}
+dialog{background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:14px;
+  padding:16px;max-width:520px;width:92%}
+dialog::backdrop{background:rgba(0,0,0,.6)}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="hrow">
+    <h1>Symptom Log</h1>
+    <span class="spacer"></span>
+    <span class="saved" id="saved">saved</span>
+  </div>
+  <div class="datenav">
+    <button class="arrow" id="prev">‹</button>
+    <input type="date" id="date">
+    <button class="arrow" id="next">›</button>
+  </div>
+  <div class="today" id="dayname"></div>
+</header>
+
+<div class="warnbox" id="storebox" style="display:none"></div>
+
+<!-- SLEEP -->
+<section id="s-sleep" class="open">
+  <div class="shead"><span class="chev">▶</span><h2>Sleep</h2><span class="spacer"></span><span class="badge" id="b-sleep">—</span></div>
+  <div class="sbody">
+    <div class="grid2">
+      <div>
+        <div class="flabel">Hours slept</div>
+        <input type="number" id="sl-hours" step="0.5" min="0" max="14" placeholder="e.g. 7.5">
+      </div>
+      <div>
+        <div class="flabel">Times woken</div>
+        <input type="number" id="sl-wakes" step="1" min="0" max="12" placeholder="e.g. 2">
+      </div>
+    </div>
+    <div class="flabel" style="margin-top:14px">Why did you wake?</div>
+    <div class="chips" id="sl-reasons"></div>
+    <div class="mini">The nightmare / bladder / random split is diagnostic information — bladder wakings are a soft marker for sleep apnoea.</div>
+  </div>
+</section>
+
+<!-- TIME POINTS -->
+<section id="s-morning" class="open">
+  <div class="shead"><span class="chev">▶</span><h2>Morning</h2><span class="spacer"></span><span class="badge" id="b-morning">—</span></div>
+  <div class="sbody" data-tp="morning"></div>
+</section>
+
+<section id="s-midday">
+  <div class="shead"><span class="chev">▶</span><h2>Midday</h2><span class="spacer"></span><span class="badge" id="b-midday">—</span></div>
+  <div class="sbody" data-tp="midday"></div>
+</section>
+
+<section id="s-evening">
+  <div class="shead"><span class="chev">▶</span><h2>Evening</h2><span class="spacer"></span><span class="badge" id="b-evening">—</span></div>
+  <div class="sbody" data-tp="evening"></div>
+</section>
+
+<!-- MEALS -->
+<section id="s-meals">
+  <div class="shead"><span class="chev">▶</span><h2>Food</h2><span class="spacer"></span><span class="badge" id="b-meals">0</span></div>
+  <div class="sbody">
+    <div class="grid2">
+      <div><div class="flabel">Time</div><input type="time" id="m-time"></div>
+      <div><div class="flabel">Est. kcal <span style="color:var(--dimmer)">(optional)</span></div><input type="number" id="m-kcal" placeholder="e.g. 500"></div>
+    </div>
+    <div class="field"><div class="flabel">What</div><input type="text" id="m-what" placeholder="havregrøt with milk + honey"></div>
+    <div class="field"><div class="flabel">Texture</div><div class="chips" id="m-texture"></div></div>
+    <div class="field"><div class="flabel">Amount</div><div class="chips" id="m-amount"></div></div>
+    <div class="field"><div class="flabel">Throat reaction within ~30 min</div><div class="chips" id="m-react"></div>
+      <div class="mini">This is the liquid-vs-solid test. Same calories, different texture — does the reaction differ?</div></div>
+    <button class="btn" id="m-add">Add food entry</button>
+    <div id="m-list"></div>
+  </div>
+</section>
+
+<!-- EPISODES -->
+<section id="s-episodes">
+  <div class="shead"><span class="chev">▶</span><h2>Episodes</h2><span class="spacer"></span><span class="badge" id="b-episodes">0</span></div>
+  <div class="sbody">
+    <div class="grid2">
+      <div><div class="flabel">Time</div><input type="time" id="e-time"></div>
+      <div><div class="flabel">Minutes</div><input type="number" id="e-dur" placeholder="e.g. 15"></div>
+    </div>
+    <div class="field"><div class="flabel">Type</div><div class="chips" id="e-type"></div></div>
+    <div class="field"><div class="flabel">Severity</div>
+      <div class="scale" id="e-sev"></div>
+      <div class="hint"><span>0 mild</span><span>10 worst</span></div></div>
+    <div class="field"><div class="flabel">Trigger / what came before</div><input type="text" id="e-trig" placeholder="after eating · sitting still · talking · nothing"></div>
+    <div class="field"><div class="flabel">What stopped it</div><input type="text" id="e-stop" placeholder="moving · standing · time · water"></div>
+    <button class="btn" id="e-add">Add episode</button>
+    <div id="e-list"></div>
+  </div>
+</section>
+
+<!-- DAY -->
+<section id="s-day">
+  <div class="shead"><span class="chev">▶</span><h2>Day summary</h2><span class="spacer"></span><span class="badge" id="b-day">—</span></div>
+  <div class="sbody">
+    <div class="grid2">
+      <div><div class="flabel">Weight (kg)</div><input type="number" id="d-weight" step="0.1" placeholder="85.0"></div>
+      <div><div class="flabel">Total kcal</div><input type="number" id="d-kcal" readonly></div>
+    </div>
+    <div class="field"><div class="flabel">Medication taken</div><div class="chips" id="d-meds"></div></div>
+    <div class="field"><div class="flabel">Activity / load</div><div class="chips" id="d-load"></div></div>
+    <div class="field"><div class="flabel">Notes</div><textarea id="d-notes" placeholder="anything that felt different"></textarea></div>
+  </div>
+</section>
+
+<!-- TREND -->
+<section id="s-trend" class="open">
+  <div class="shead"><span class="chev">▶</span><h2>Trend</h2><span class="spacer"></span><span class="badge" id="b-trend">—</span></div>
+  <div class="sbody">
+    <div class="chartwrap">
+      <div style="font-size:11px;color:var(--dim);margin-bottom:6px">Today — across the day</div>
+      <svg id="dayChart" viewBox="0 0 300 110" style="width:100%;height:auto"></svg>
+      <div class="legend">
+        <span><i class="dot" style="background:var(--throat)"></i>Throat</span>
+        <span><i class="dot" style="background:var(--breath)"></i>Breathing</span>
+        <span><i class="dot" style="background:var(--head)"></i>Head</span>
+        <span><i class="dot" style="background:var(--energy)"></i>Energy</span>
+      </div>
+    </div>
+    <div class="chartwrap">
+      <div style="font-size:11px;color:var(--dim);margin-bottom:6px">Last 14 days — daily average</div>
+      <svg id="histChart" viewBox="0 0 300 110" style="width:100%;height:auto"></svg>
+      <div class="legend" id="histLegend">
+        <span><i class="dot" style="background:var(--throat)"></i>Throat</span>
+        <span><i class="dot" style="background:var(--breath)"></i>Breathing</span>
+        <span><i class="dot" style="background:var(--accent)"></i>Sleep h (scaled)</span>
+      </div>
+      <div class="mini" id="corr"></div>
+    </div>
+  </div>
+</section>
+
+<div class="note">
+  Scores: <b>0 = absent</b>, <b>10 = worst it has ever been</b>. Score how it is <i>right now</i>, not how the whole block went. Consistency matters more than precision — the shape of the curve is the finding, not any single number.
+</div>
+
+<footer>
+  <button class="btn ghost" id="btn-import">Import</button>
+  <button class="btn ghost" id="btn-export">Export</button>
+  <button class="btn" id="btn-copy">Copy summary</button>
+</footer>
+
+<dialog id="dlg">
+  <h2 style="margin-bottom:8px">Paste saved data</h2>
+  <textarea id="dlg-ta" style="min-height:150px" placeholder="Paste the contents of your exported .json file here"></textarea>
+  <div class="grid2" style="margin-top:10px">
+    <button class="btn ghost" id="dlg-cancel">Cancel</button>
+    <button class="btn" id="dlg-ok">Load</button>
+  </div>
+  <div class="mini" style="margin-top:8px">Or choose the file: <input type="file" id="dlg-file" accept=".json,application/json" style="padding:6px;margin-top:6px"></div>
+</dialog>
+
+<script>
+(function(){
+"use strict";
+
+/* ============ config ============ */
+var SX = [
+  ["globus","Globus / lump"],["tickle","Tickle / cough urge"],["clearing","Throat clearing"],
+  ["hoarse","Hoarse / voice change"],["swal_sal","Dysphagia — saliva"],["swal_sol","Dysphagia — solids"],
+  ["burp","Locked burp"],["bloat","Bloating / early satiety"],
+  ["airhunger","Air hunger"],["deepbreath","Need deep breath / yawn"],
+  ["headpress","Head pressure"],["dizzy","Dizziness"],
+  ["surge","Cluster B surge (cold/shaking/dread)"],["presyncope","Near-syncope"],
+  ["weak","Weakness"],["nausea","Nausea"],["bitter","Bitter / metallic taste"]
+];
+var METRICS = [
+  ["throat","Throat","var(--throat)"],
+  ["breath","Breathing","var(--breath)"],
+  ["head","Head pressure / dizziness","var(--head)"],
+  ["energy","Energy","var(--energy)"]
+];
+var TPS = ["morning","midday","evening"];
+var WAKE = [["nightmare","Nightmare"],["bladder","Full bladder"],["random","Random"],["natural","Slept through"],["breathless","Breathless"]];
+var TEXTURE = [["liquid","Liquid"],["puree","Purée / smooth"],["soft","Soft solid"],["normal","Normal solid"],["dry","Dry / crumbly"]];
+var AMOUNT = [["few","A few bites"],["small","Small"],["normal","Normal"],["large","Large"]];
+var REACT = [["none","No reaction"],["mild","Mild"],["strong","Strong / episode"]];
+var ETYPE = [["laryngo","Laryngospasm"],["choke","Choking / food-triggered"],["surge","Cluster B surge"],["seated","Seated episode"],["presyncope","Near-syncope"],["other","Other"]];
+var MEDS = [["panto","Pantoprazol"],["gaviscon","Gaviscon"],["nutridrink","Næringsdrikk"],["other","Other"]];
+var LOAD = [["rest","Rested"],["light","Light activity"],["walk","Walked"],["work","Worked"],["talk","Talked a lot"],["heat","Heat exposure"]];
+
+/* ============ state ============ */
+var KEY = "symptomlog.v1";
+var DB = { v:1, days:{} };
+var cur;
+var STORE = null;      // "local" | null
+var lastSaveOK = true;
+
+function storeAvailable(){
+  try{
+    var t="__t"+Date.now();
+    window.localStorage.setItem(t,"1");
+    window.localStorage.removeItem(t);
+    return true;
+  }catch(e){ return false; }
+}
+function save(){
+  if(STORE!=="local") return;
+  try{ window.localStorage.setItem(KEY, JSON.stringify(DB)); lastSaveOK=true; }
+  catch(e){ lastSaveOK=false; storeStatus(); }
+}
+function loadStore(){
+  if(STORE!=="local") return false;
+  try{
+    var raw=window.localStorage.getItem(KEY);
+    if(!raw) return false;
+    var o=JSON.parse(raw);
+    if(o&&o.days){ DB=o; return true; }
+  }catch(e){}
+  return false;
+}
+function storeStatus(){
+  var b=document.getElementById("storebox");
+  if(!b) return;
+  b.style.display="block";
+  if(STORE==="local" && lastSaveOK){
+    b.className="warnbox okbox";
+    var n=Object.keys(DB.days).length;
+    b.innerHTML="Saved automatically on this device"+(n?" · <b>"+n+"</b> day"+(n===1?"":"s")+" stored":"")+
+      ". Use <b>Export</b> now and then for a backup copy.";
+  } else if(STORE==="local"){
+    b.className="warnbox";
+    b.innerHTML="<b>Storage is full or blocked</b> — recent changes may not be saved. Press <b>Export</b> now.";
+  } else {
+    b.className="warnbox";
+    b.innerHTML="This browser is not letting the page store data (private mode, or opened as a local file). "+
+      "<b>Press “Export” before closing</b>, and “Import” to load it back.";
+  }
+}
+
+STORE = storeAvailable() ? "local" : null;
+loadStore();
+cur = todayISO();
+
+function todayISO(){ var d=new Date(); return iso(d); }
+function iso(d){ return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate()); }
+function pad(n){ return (n<10?"0":"")+n; }
+function nowHM(){ var d=new Date(); return pad(d.getHours())+":"+pad(d.getMinutes()); }
+function $(id){ return document.getElementById(id); }
+
+function blankTP(){ var o={sx:[]}; METRICS.forEach(function(m){o[m[0]]=null;}); return o; }
+function day(d){
+  if(!DB.days[d]){
+    DB.days[d] = { sleep:{hours:null,wakes:null,reasons:[]},
+      tp:{morning:blankTP(),midday:blankTP(),evening:blankTP()},
+      meals:[], episodes:[], weight:null, meds:[], load:[], notes:"" };
+  }
+  var D = DB.days[d];
+  TPS.forEach(function(t){ if(!D.tp[t]) D.tp[t]=blankTP(); });
+  return D;
+}
+function flash(){ var s=$("saved"); s.classList.add("on"); setTimeout(function(){s.classList.remove("on");},700); }
+function touched(){ save(); flash(); renderBadges(); drawDay(); drawHist(); storeStatus(); }
+
+/* ============ builders ============ */
+function chipRow(el, opts, getter, setter, multi, warnKeys){
+  el.innerHTML="";
+  opts.forEach(function(o){
+    var b=document.createElement("button");
+    b.className="chip"+(warnKeys&&warnKeys.indexOf(o[0])>=0?" warnchip":"");
+    b.type="button"; b.textContent=o[1]; b.dataset.k=o[0];
+    b.onclick=function(){
+      var v=getter();
+      if(multi){
+        var i=v.indexOf(o[0]);
+        if(i>=0) v.splice(i,1); else v.push(o[0]);
+        setter(v);
+      } else {
+        setter(v===o[0]? null : o[0]);
+      }
+      syncChips(el,getter,multi); touched();
+    };
+    el.appendChild(b);
+  });
+  syncChips(el,getter,multi);
+}
+function syncChips(el,getter,multi){
+  var v=getter();
+  Array.prototype.forEach.call(el.children,function(b){
+    var on = multi ? (v||[]).indexOf(b.dataset.k)>=0 : v===b.dataset.k;
+    b.classList.toggle("on",on);
+  });
+}
+function scaleRow(host, color, getter, setter){
+  host.innerHTML="";
+  for(var i=0;i<=10;i++){
+    (function(n){
+      var b=document.createElement("button"); b.type="button"; b.textContent=n;
+      b.onclick=function(){ setter(getter()===n?null:n); syncScale(host,color,getter); touched(); };
+      host.appendChild(b);
+    })(i);
+  }
+  syncScale(host,color,getter);
+}
+function syncScale(host,color,getter){
+  var v=getter();
+  Array.prototype.forEach.call(host.children,function(b,i){
+    var on = v!==null && v!==undefined && i<=v;
+    b.classList.toggle("on",on);
+    b.style.background = on? color : "";
+  });
+}
+
+/* ============ time-point panels ============ */
+TPS.forEach(function(tp){
+  var body = document.querySelector('#s-'+tp+' .sbody');
+  METRICS.forEach(function(m){
+    var f=document.createElement("div"); f.className="field";
+    f.innerHTML='<div class="flabel"><i class="dot" style="background:'+m[2]+'"></i>'+m[1]+
+      '<span class="val" id="v-'+tp+'-'+m[0]+'">—</span></div>'+
+      '<div class="scale" id="sc-'+tp+'-'+m[0]+'"></div>'+
+      '<div class="hint"><span>'+(m[0]==="energy"?"0 none":"0 absent")+'</span><span>'+(m[0]==="energy"?"10 normal":"10 worst")+'</span></div>';
+    body.appendChild(f);
+  });
+  var sf=document.createElement("div"); sf.className="field";
+  sf.innerHTML='<div class="flabel">Present right now</div><div class="chips" id="sx-'+tp+'"></div>';
+  body.appendChild(sf);
+});
+
+/* ============ wiring ============ */
+function bindAll(){
+  var D=day(cur);
+
+  // sleep
+  $("sl-hours").value = D.sleep.hours===null?"":D.sleep.hours;
+  $("sl-wakes").value = D.sleep.wakes===null?"":D.sleep.wakes;
+  $("sl-hours").oninput=function(){ D.sleep.hours = this.value===""?null:parseFloat(this.value); touched(); };
+  $("sl-wakes").oninput=function(){ D.sleep.wakes = this.value===""?null:parseInt(this.value,10); touched(); };
+  chipRow($("sl-reasons"),WAKE,function(){return D.sleep.reasons;},function(v){D.sleep.reasons=v;},true,["nightmare","breathless"]);
+
+  // time points
+  TPS.forEach(function(tp){
+    METRICS.forEach(function(m){
+      (function(key,color){
+        var g=function(){ return D.tp[tp][key]; };
+        var s=function(v){ D.tp[tp][key]=v; $("v-"+tp+"-"+key).textContent = v===null?"—":v; };
+        scaleRow($("sc-"+tp+"-"+key), color, g, s);
+        $("v-"+tp+"-"+key).textContent = g()===null||g()===undefined?"—":g();
+      })(m[0],m[2]);
+    });
+    chipRow($("sx-"+tp),SX,function(){return D.tp[tp].sx;},function(v){D.tp[tp].sx=v;},true,["presyncope","surge"]);
+  });
+
+  // meals
+  var mt={texture:null,amount:null,react:null};
+  chipRow($("m-texture"),TEXTURE,function(){return mt.texture;},function(v){mt.texture=v;},false);
+  chipRow($("m-amount"),AMOUNT,function(){return mt.amount;},function(v){mt.amount=v;},false);
+  chipRow($("m-react"),REACT,function(){return mt.react;},function(v){mt.react=v;},false,["strong"]);
+  if(!$("m-time").value) $("m-time").value=nowHM();
+  $("m-add").onclick=function(){
+    var what=$("m-what").value.trim();
+    if(!what){ $("m-what").focus(); return; }
+    D.meals.push({time:$("m-time").value||nowHM(),what:what,
+      kcal:$("m-kcal").value?parseInt($("m-kcal").value,10):null,
+      texture:mt.texture,amount:mt.amount,react:mt.react});
+    D.meals.sort(function(a,b){return a.time<b.time?-1:1;});
+    $("m-what").value=""; $("m-kcal").value=""; $("m-time").value=nowHM();
+    mt.texture=null;mt.amount=null;mt.react=null;
+    syncChips($("m-texture"),function(){return mt.texture;},false);
+    syncChips($("m-amount"),function(){return mt.amount;},false);
+    syncChips($("m-react"),function(){return mt.react;},false);
+    renderMeals(); touched();
+  };
+
+  // episodes
+  var et={type:null,sev:null};
+  chipRow($("e-type"),ETYPE,function(){return et.type;},function(v){et.type=v;},false,["laryngo","choke"]);
+  scaleRow($("e-sev"),"var(--warn)",function(){return et.sev;},function(v){et.sev=v;});
+  if(!$("e-time").value) $("e-time").value=nowHM();
+  $("e-add").onclick=function(){
+    if(!et.type){ $("e-type").scrollIntoView({block:"center"}); return; }
+    D.episodes.push({time:$("e-time").value||nowHM(),type:et.type,
+      dur:$("e-dur").value?parseInt($("e-dur").value,10):null,
+      sev:et.sev,trig:$("e-trig").value.trim(),stop:$("e-stop").value.trim()});
+    D.episodes.sort(function(a,b){return a.time<b.time?-1:1;});
+    $("e-dur").value="";$("e-trig").value="";$("e-stop").value="";$("e-time").value=nowHM();
+    et.type=null;et.sev=null;
+    syncChips($("e-type"),function(){return et.type;},false);
+    syncScale($("e-sev"),"var(--warn)",function(){return et.sev;});
+    renderEpisodes(); touched();
+  };
+
+  // day
+  $("d-weight").value = D.weight===null?"":D.weight;
+  $("d-weight").oninput=function(){ D.weight=this.value===""?null:parseFloat(this.value); touched(); };
+  $("d-notes").value = D.notes||"";
+  $("d-notes").oninput=function(){ D.notes=this.value; save(); flash(); };
+  chipRow($("d-meds"),MEDS,function(){return D.meds;},function(v){D.meds=v;},true);
+  chipRow($("d-load"),LOAD,function(){return D.load;},function(v){D.load=v;},true,["heat"]);
+
+  renderMeals(); renderEpisodes(); renderBadges(); drawDay(); drawHist();
+}
+
+function renderMeals(){
+  var D=day(cur), h=$("m-list"); h.innerHTML="";
+  D.meals.forEach(function(m,i){
+    var d=document.createElement("div"); d.className="item";
+    var rc = m.react==="none"?"r0":m.react==="mild"?"r1":m.react==="strong"?"r2":"";
+    d.innerHTML='<div class="top"><span class="t">'+m.time+'</span><span>'+esc(m.what)+'</span>'+
+      '<button class="del" data-i="'+i+'">✕</button></div>'+
+      '<div class="sub">'+[lab(TEXTURE,m.texture),lab(AMOUNT,m.amount),m.kcal?m.kcal+" kcal":""].filter(Boolean).join(" · ")+
+      (m.react?' <span class="tag '+rc+'">'+lab(REACT,m.react)+'</span>':'')+'</div>';
+    d.querySelector(".del").onclick=function(){ D.meals.splice(parseInt(this.dataset.i,10),1); renderMeals(); touched(); };
+    h.appendChild(d);
+  });
+}
+function renderEpisodes(){
+  var D=day(cur), h=$("e-list"); h.innerHTML="";
+  D.episodes.forEach(function(e,i){
+    var d=document.createElement("div"); d.className="item";
+    d.innerHTML='<div class="top"><span class="t">'+e.time+'</span><span>'+lab(ETYPE,e.type)+'</span>'+
+      (e.sev!==null&&e.sev!==undefined?'<span class="tag r2">'+e.sev+'/10</span>':'')+
+      '<button class="del" data-i="'+i+'">✕</button></div>'+
+      '<div class="sub">'+[e.dur?e.dur+" min":"",e.trig?"trigger: "+esc(e.trig):"",e.stop?"stopped by: "+esc(e.stop):""].filter(Boolean).join(" · ")+'</div>';
+    d.querySelector(".del").onclick=function(){ D.episodes.splice(parseInt(this.dataset.i,10),1); renderEpisodes(); touched(); };
+    h.appendChild(d);
+  });
+}
+function lab(list,k){ for(var i=0;i<list.length;i++) if(list[i][0]===k) return list[i][1]; return ""; }
+function esc(s){ return String(s).replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c];}); }
+
+function renderBadges(){
+  var D=day(cur);
+  $("b-sleep").textContent = D.sleep.hours!==null? D.sleep.hours+" h" : "—";
+  $("b-sleep").classList.toggle("filled", D.sleep.hours!==null);
+  TPS.forEach(function(tp){
+    var t=D.tp[tp].throat, b=D.tp[tp].breath;
+    var done = t!==null&&t!==undefined;
+    $("b-"+tp).textContent = done ? ("T"+t+(b!==null&&b!==undefined?" · B"+b:"")) : "—";
+    $("b-"+tp).classList.toggle("filled",done);
+  });
+  $("b-meals").textContent = D.meals.length;
+  $("b-meals").classList.toggle("filled",D.meals.length>0);
+  $("b-episodes").textContent = D.episodes.length;
+  $("b-episodes").classList.toggle("filled",D.episodes.length>0);
+  var kcal=D.meals.reduce(function(a,m){return a+(m.kcal||0);},0);
+  $("d-kcal").value = kcal||"";
+  $("b-day").textContent = (D.weight?D.weight+" kg":"") + (kcal?(D.weight?" · ":"")+kcal+" kcal":"") || "—";
+  $("b-day").classList.toggle("filled", !!(D.weight||kcal));
+  var dn=new Date(cur+"T12:00:00");
+  $("dayname").textContent = dn.toLocaleDateString(undefined,{weekday:"long",day:"numeric",month:"long"}) +
+    (cur===todayISO()?"  ·  today":"");
+}
+
+/* ============ charts ============ */
+function svgLine(svg, series, labels){
+  var W=300,H=110,L=22,R=6,T=8,B=18;
+  var n=labels.length, iw=W-L-R, ih=H-T-B;
+  var out='';
+  [0,5,10].forEach(function(v){
+    var y=T+ih-(v/10)*ih;
+    out+='<line x1="'+L+'" y1="'+y+'" x2="'+(W-R)+'" y2="'+y+'" stroke="#26343a" stroke-width="1"/>';
+    out+='<text x="2" y="'+(y+3)+'" fill="#5f747d" font-size="8">'+v+'</text>';
+  });
+  labels.forEach(function(lb,i){
+    var x=L+(n===1?iw/2:(i/(n-1))*iw);
+    out+='<text x="'+x+'" y="'+(H-5)+'" fill="#5f747d" font-size="8" text-anchor="middle">'+lb+'</text>';
+  });
+  series.forEach(function(s){
+    var pts=[],d="";
+    s.data.forEach(function(v,i){
+      if(v===null||v===undefined) return;
+      var x=L+(n===1?iw/2:(i/(n-1))*iw), y=T+ih-(v/10)*ih;
+      pts.push([x,y]);
+    });
+    pts.forEach(function(p,i){ d+=(i?"L":"M")+p[0].toFixed(1)+","+p[1].toFixed(1); });
+    if(pts.length>1) out+='<path d="'+d+'" fill="none" stroke="'+s.color+'" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>';
+    pts.forEach(function(p){ out+='<circle cx="'+p[0].toFixed(1)+'" cy="'+p[1].toFixed(1)+'" r="2.6" fill="'+s.color+'"/>'; });
+  });
+  svg.innerHTML=out;
+}
+function cssv(v){ return getComputedStyle(document.documentElement).getPropertyValue(v).trim()||v; }
+function drawDay(){
+  var D=day(cur);
+  var series=METRICS.map(function(m){
+    return { color: cssv(m[2].replace("var(","").replace(")","")),
+             data: TPS.map(function(t){ return D.tp[t][m[0]]; }) };
+  });
+  svgLine($("dayChart"), series, ["morning","midday","evening"]);
+}
+function drawHist(){
+  var days=[], d=new Date(cur+"T12:00:00");
+  for(var i=13;i>=0;i--){ var x=new Date(d); x.setDate(d.getDate()-i); days.push(iso(x)); }
+  function avg(dd,key){
+    var D=DB.days[dd]; if(!D) return null;
+    var vals=TPS.map(function(t){return D.tp[t]?D.tp[t][key]:null;}).filter(function(v){return v!==null&&v!==undefined;});
+    if(!vals.length) return null;
+    return vals.reduce(function(a,b){return a+b;},0)/vals.length;
+  }
+  var series=[
+    {color:cssv("--throat"),data:days.map(function(x){return avg(x,"throat");})},
+    {color:cssv("--breath"),data:days.map(function(x){return avg(x,"breath");})},
+    {color:cssv("--accent"),data:days.map(function(x){ var D=DB.days[x]; return D&&D.sleep.hours!==null? Math.min(10,D.sleep.hours):null; })}
+  ];
+  svgLine($("histChart"), series, days.map(function(x,i){ return (i%3===0)? x.slice(8) : ""; }));
+
+  // sleep vs breathing correlation
+  var pairs=[];
+  days.forEach(function(x){
+    var D=DB.days[x]; if(!D||D.sleep.hours===null) return;
+    var b=avg(x,"breath"); if(b===null) return;
+    pairs.push([D.sleep.hours,b]);
+  });
+  var el=$("corr");
+  if(pairs.length<4){ el.textContent="Need at least 4 logged days to look at sleep vs breathing."; return; }
+  var n=pairs.length, sx=0,sy=0,sxy=0,sxx=0,syy=0;
+  pairs.forEach(function(p){ sx+=p[0];sy+=p[1];sxy+=p[0]*p[1];sxx+=p[0]*p[0];syy+=p[1]*p[1]; });
+  var den=Math.sqrt((n*sxx-sx*sx)*(n*syy-sy*sy));
+  if(!den){ el.textContent=""; return; }
+  var r=(n*sxy-sx*sy)/den;
+  var dir = r<-0.4? "More sleep → better breathing." : r>0.4? "More sleep → worse breathing." : "No clear link yet.";
+  el.textContent = "Sleep vs breathing over "+n+" days: r = "+r.toFixed(2)+". "+dir+" (Not proof — just the shape so far.)";
+}
+
+/* ============ export / import / summary ============ */
+function download(name, text, mime){
+  var b=new Blob([text],{type:mime||"application/json"});
+  var u=URL.createObjectURL(b), a=document.createElement("a");
+  a.href=u; a.download=name; document.body.appendChild(a); a.click();
+  setTimeout(function(){ URL.revokeObjectURL(u); a.remove(); },500);
+}
+$("btn-export").onclick=function(){
+  download("symptom-log-"+todayISO()+".json", JSON.stringify(DB,null,1));
+};
+$("btn-import").onclick=function(){ $("dlg").showModal(); };
+$("dlg-cancel").onclick=function(){ $("dlg").close(); };
+$("dlg-ok").onclick=function(){ loadText($("dlg-ta").value); };
+$("dlg-file").onchange=function(){
+  var f=this.files[0]; if(!f) return;
+  var r=new FileReader(); r.onload=function(){ loadText(r.result); }; r.readAsText(f);
+};
+function loadText(t){
+  try{
+    var o=JSON.parse(t);
+    if(!o||!o.days) throw 0;
+    DB=o; save(); $("dlg").close(); $("dlg-ta").value="";
+    bindAll(); storeStatus();
+  }catch(e){ alert("That didn't parse as a saved log file."); }
+}
+
+function summary(){
+  var D=day(cur), L=[];
+  L.push("### Symptom log — "+cur);
+  var s=[];
+  if(D.sleep.hours!==null) s.push(D.sleep.hours+" h");
+  if(D.sleep.wakes!==null) s.push(D.sleep.wakes+" wakings");
+  if(D.sleep.reasons.length) s.push(D.sleep.reasons.map(function(k){return lab(WAKE,k);}).join(", "));
+  if(s.length) L.push("**Sleep:** "+s.join(" · "));
+  L.push("");
+  L.push("| | Throat | Breathing | Head | Energy |");
+  L.push("|---|---|---|---|---|");
+  TPS.forEach(function(t){
+    var r=D.tp[t];
+    L.push("| "+t+" | "+f(r.throat)+" | "+f(r.breath)+" | "+f(r.head)+" | "+f(r.energy)+" |");
+  });
+  function f(v){ return (v===null||v===undefined)?"—":v; }
+  TPS.forEach(function(t){
+    if(D.tp[t].sx.length) L.push("- **"+t+" symptoms:** "+D.tp[t].sx.map(function(k){return lab(SX,k);}).join(", "));
+  });
+  if(D.meals.length){
+    L.push(""); L.push("**Food**");
+    D.meals.forEach(function(m){
+      L.push("- "+m.time+" — "+m.what+" ("+[lab(TEXTURE,m.texture),lab(AMOUNT,m.amount),m.kcal?m.kcal+" kcal":""].filter(Boolean).join(", ")+")"+
+        (m.react?" → **"+lab(REACT,m.react)+"**":""));
+    });
+    var k=D.meals.reduce(function(a,m){return a+(m.kcal||0);},0);
+    if(k) L.push("- **Total: "+k+" kcal**");
+  }
+  if(D.episodes.length){
+    L.push(""); L.push("**Episodes**");
+    D.episodes.forEach(function(e){
+      L.push("- "+e.time+" — "+lab(ETYPE,e.type)+(e.sev!==null&&e.sev!==undefined?" "+e.sev+"/10":"")+
+        (e.dur?", "+e.dur+" min":"")+(e.trig?", trigger: "+e.trig:"")+(e.stop?", stopped by: "+e.stop:""));
+    });
+  }
+  L.push("");
+  var d=[];
+  if(D.weight) d.push("Weight "+D.weight+" kg");
+  if(D.meds.length) d.push("Meds: "+D.meds.map(function(k){return lab(MEDS,k);}).join(", "));
+  if(D.load.length) d.push("Load: "+D.load.map(function(k){return lab(LOAD,k);}).join(", "));
+  if(d.length) L.push("**Day:** "+d.join(" · "));
+  if(D.notes) L.push(""), L.push("**Notes:** "+D.notes);
+  return L.join("\n");
+}
+$("btn-copy").onclick=function(){
+  var t=summary();
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(t).then(function(){ toast("Copied — paste it into the chat"); },function(){ fallback(t); });
+  } else fallback(t);
+};
+function fallback(t){
+  var ta=document.createElement("textarea"); ta.value=t;
+  ta.style.cssText="position:fixed;top:10%;left:5%;width:90%;height:60%;z-index:99;font-size:12px";
+  document.body.appendChild(ta); ta.select();
+  try{ document.execCommand("copy"); toast("Copied"); }catch(e){ toast("Select and copy manually"); }
+  setTimeout(function(){ ta.remove(); },4000);
+}
+function toast(msg){
+  var d=document.createElement("div");
+  d.textContent=msg;
+  d.style.cssText="position:fixed;bottom:88px;left:50%;transform:translateX(-50%);background:#2a8d7c;color:#fff;padding:9px 16px;border-radius:20px;font-size:13px;z-index:99";
+  document.body.appendChild(d);
+  setTimeout(function(){ d.remove(); },2200);
+}
+
+/* ============ nav ============ */
+$("date").value=cur;
+$("date").onchange=function(){ cur=this.value||todayISO(); bindAll(); };
+$("prev").onclick=function(){ shift(-1); };
+$("next").onclick=function(){ shift(1); };
+function shift(n){
+  var d=new Date(cur+"T12:00:00"); d.setDate(d.getDate()+n);
+  cur=iso(d); $("date").value=cur; bindAll();
+}
+document.querySelectorAll(".shead").forEach(function(h){
+  h.onclick=function(){ h.parentElement.classList.toggle("open"); };
+});
+
+bindAll();
+storeStatus();
+})();
+</script>
+</body>
+</html>
