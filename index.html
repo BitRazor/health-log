@@ -209,7 +209,14 @@ dialog::backdrop{background:rgba(0,0,0,.6)}
       <div><div class="flabel">Time</div><input type="time" id="e-time"></div>
       <div><div class="flabel">Minutes</div><input type="number" id="e-dur" placeholder="e.g. 15"></div>
     </div>
-    <div class="field"><div class="flabel">Type</div><div class="chips" id="e-type"></div></div>
+    <div class="field"><div class="flabel">Type</div><div class="chips" id="e-type"></div>
+      <div class="addrow" id="eadd">
+        <div class="r"><input type="text" id="ein" placeholder="new episode type, e.g. cold sweat attack" maxlength="40">
+        <button class="btn" id="ebtn">Add</button></div>
+        <div class="mini">Added episode types stay available on every day.</div>
+        <div class="custlist" id="ecust"></div>
+      </div>
+    </div>
     <div class="field"><div class="flabel">Severity</div>
       <div class="scale" id="e-sev"></div>
       <div class="hint"><span>0 mild</span><span>10 worst</span></div></div>
@@ -308,13 +315,13 @@ var WAKE = [["nightmare","Nightmare"],["bladder","Full bladder"],["random","Rand
 var TEXTURE = [["liquid","Liquid"],["puree","Purée / smooth"],["soft","Soft solid"],["normal","Normal solid"],["dry","Dry / crumbly"]];
 var AMOUNT = [["few","A few bites"],["small","Small"],["normal","Normal"],["large","Large"]];
 var REACT = [["none","No reaction"],["mild","Mild"],["strong","Strong / episode"]];
-var ETYPE = [["laryngo","Laryngospasm"],["choke","Choking / food-triggered"],["surge","Cluster B surge"],["seated","Seated episode"],["presyncope","Near-syncope"],["other","Other"]];
+var ETYPE = [["laryngo","Laryngospasm"],["choke","Choking / food-triggered"],["sob","Shortness of breath"],["surge","Cluster B surge"],["seated","Seated episode"],["presyncope","Near-syncope"],["other","Other"]];
 var MEDS = [["panto","Pantoprazol"],["gaviscon","Gaviscon"],["nutridrink","Næringsdrikk"],["other","Other"]];
 var LOAD = [["rest","Rested"],["light","Light activity"],["walk","Walked"],["work","Worked"],["talk","Talked a lot"],["heat","Heat exposure"]];
 
 /* ============ state ============ */
 var KEY = "symptomlog.v1";
-var DB = { v:1, days:{}, customSx:[] };
+var DB = { v:1, days:{}, customSx:[], customEt:[] };
 var cur;
 var STORE = null;      // "local" | null
 var lastSaveOK = true;
@@ -380,6 +387,8 @@ function day(d){
   }
   var D = DB.days[d];
   if(!DB.customSx) DB.customSx=[];
+  if(!DB.customEt) DB.customEt=[];
+  if(!D.episodes) D.episodes=[];
   TPS.forEach(function(t){
     if(!D.tp[t]) D.tp[t]=blankTP();
     var T=D.tp[t];
@@ -530,6 +539,74 @@ function sxRow(tp,D){
   draw();
 }
 
+/* ============ episode-type chips with custom additions ============ */
+function etypeRow(getter,setter){
+  var wrap=$("e-type"), addw=$("eadd"), inp=$("ein"), btn=$("ebtn"), cust=$("ecust");
+  var WARN=["laryngo","choke","sob","presyncope"];
+  function usedCount(k){
+    var n=0;
+    Object.keys(DB.days).forEach(function(d){
+      (DB.days[d].episodes||[]).forEach(function(e){ if(e.type===k) n++; });
+    });
+    return n;
+  }
+  function draw(){
+    wrap.innerHTML="";
+    allEt().forEach(function(o){
+      var b=document.createElement("button");
+      b.className="chip"+(WARN.indexOf(o[0])>=0?" warnchip":"");
+      b.type="button"; b.textContent=o[1]; b.dataset.k=o[0];
+      if(getter()===o[0]) b.classList.add("on");
+      b.onclick=function(){
+        setter(getter()===o[0]?null:o[0]);
+        syncChips(wrap,getter,false);
+      };
+      wrap.appendChild(b);
+    });
+    var plus=document.createElement("button");
+    plus.className="chip addchip"; plus.type="button"; plus.textContent="＋";
+    plus.title="Add your own episode type";
+    plus.onclick=function(){
+      addw.classList.toggle("open");
+      if(addw.classList.contains("open")){ drawCust(); inp.focus(); }
+    };
+    wrap.appendChild(plus);
+  }
+  function drawCust(){
+    cust.innerHTML="";
+    (DB.customEt||[]).forEach(function(o){
+      var d=document.createElement("span"); d.className="c";
+      d.appendChild(document.createTextNode(o[1]));
+      var x=document.createElement("button"); x.type="button"; x.textContent="✕";
+      x.title="Remove from the list";
+      x.onclick=function(){
+        var n=usedCount(o[0]);
+        if(n){ toast("Used on "+n+" logged episode"+(n===1?"":"s")+" — kept"); return; }
+        DB.customEt=DB.customEt.filter(function(q){return q[0]!==o[0];});
+        if(getter()===o[0]) setter(null);
+        touched(); draw(); drawCust();
+      };
+      d.appendChild(x); cust.appendChild(d);
+    });
+    if(!(DB.customEt||[]).length) cust.innerHTML='<span class="mini">Nothing added yet.</span>';
+  }
+  function add(){
+    var t=inp.value.trim();
+    if(!t) return;
+    var dup=allEt().filter(function(o){return o[1].toLowerCase()===t.toLowerCase();})[0];
+    if(dup){ inp.value=""; setter(dup[0]); draw(); return; }
+    var k=slugEt(t);
+    DB.customEt.push([k,t]);
+    inp.value="";
+    setter(k);
+    touched(); draw(); drawCust();
+  }
+  btn.onclick=add;
+  inp.onkeydown=function(e){ if(e.key==="Enter"){ e.preventDefault(); add(); } };
+  window.__redrawEt=draw;
+  draw();
+}
+
 /* ============ wiring ============ */
 function bindAll(){
   var D=day(cur);
@@ -588,7 +665,7 @@ function bindAll(){
 
   // episodes
   var et={type:null,sev:null};
-  chipRow($("e-type"),ETYPE,function(){return et.type;},function(v){et.type=v;},false,["laryngo","choke"]);
+  etypeRow(function(){return et.type;},function(v){et.type=v;});
   scaleRow($("e-sev"),"var(--warn)",function(){return et.sev;},function(v){et.sev=v;});
   if(!$("e-time").value) $("e-time").value=nowHM();
   $("e-add").onclick=function(){
@@ -632,7 +709,7 @@ function renderEpisodes(){
   var D=day(cur), h=$("e-list"); h.innerHTML="";
   D.episodes.forEach(function(e,i){
     var d=document.createElement("div"); d.className="item";
-    d.innerHTML='<div class="top"><span class="t">'+e.time+'</span><span>'+lab(ETYPE,e.type)+'</span>'+
+    d.innerHTML='<div class="top"><span class="t">'+e.time+'</span><span>'+lab(allEt(),e.type)+'</span>'+
       (e.sev!==null&&e.sev!==undefined?'<span class="tag r2">'+e.sev+'/10</span>':'')+
       '<button class="del" data-i="'+i+'">✕</button></div>'+
       '<div class="sub">'+[e.dur?e.dur+" min":"",e.trig?"trigger: "+esc(e.trig):"",e.stop?"stopped by: "+esc(e.stop):""].filter(Boolean).join(" · ")+'</div>';
@@ -641,11 +718,18 @@ function renderEpisodes(){
   });
 }
 function allSx(){ return SX.concat(DB.customSx||[]); }
+function allEt(){ return ETYPE.concat(DB.customEt||[]); }
 function isCustom(k){ return (DB.customSx||[]).some(function(o){return o[0]===k;}); }
 function slug(t){
   var b=t.toLowerCase().replace(/[^a-z0-9]+/g,"_").replace(/^_|_$/g,"").slice(0,24)||"sx";
   var k=b,n=2;
   while(allSx().some(function(o){return o[0]===k;})) k=b+"_"+(n++);
+  return k;
+}
+function slugEt(t){
+  var b=t.toLowerCase().replace(/[^a-z0-9]+/g,"_").replace(/^_|_$/g,"").slice(0,24)||"ep";
+  var k=b,n=2;
+  while(allEt().some(function(o){return o[0]===k;})) k=b+"_"+(n++);
   return k;
 }
 function lab(list,k){ for(var i=0;i<list.length;i++) if(list[i][0]===k) return list[i][1]; return ""; }
@@ -802,7 +886,7 @@ function summary(){
   if(D.episodes.length){
     L.push(""); L.push("**Episodes**");
     D.episodes.forEach(function(e){
-      L.push("- "+e.time+" — "+lab(ETYPE,e.type)+(e.sev!==null&&e.sev!==undefined?" "+e.sev+"/10":"")+
+      L.push("- "+e.time+" — "+lab(allEt(),e.type)+(e.sev!==null&&e.sev!==undefined?" "+e.sev+"/10":"")+
         (e.dur?", "+e.dur+" min":"")+(e.trig?", trigger: "+e.trig:"")+(e.stop?", stopped by: "+e.stop:""));
     });
   }
