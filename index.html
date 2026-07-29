@@ -16,7 +16,7 @@
   --bg:#0e1417; --panel:#151d21; --panel2:#1b262b; --line:#26343a;
   --text:#e6eef1; --dim:#8fa3ab; --dimmer:#5f747d;
   --accent:#3fbfa8; --accent2:#2a8d7c;
-  --throat:#f2994a; --breath:#56a8f5; --head:#b18cf0; --energy:#7ed957;
+  --throat:#f2994a; --breath:#56a8f5; --head:#b18cf0; --energy:#7ed957; --gut:#e8c95c;
   --warn:#e2603f;
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -69,6 +69,20 @@ section.open .sbody{display:block}
   padding:7px 12px;font-size:13px;cursor:pointer;font-family:inherit}
 .chip.on{background:var(--accent2);border-color:var(--accent);color:#fff}
 .chip.warnchip.on{background:var(--warn);border-color:var(--warn)}
+.chip.addchip{border-style:dashed;color:var(--accent);font-weight:700;padding:7px 14px}
+.addrow{display:none;margin-top:8px;background:var(--panel2);border:1px solid var(--line);border-radius:11px;padding:10px}
+.addrow.open{display:block}
+.addrow .r{display:flex;gap:6px}
+.addrow .r input{flex:1}
+.addrow .r button{width:auto;margin-top:0;padding:10px 16px;white-space:nowrap}
+.custlist{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.custlist .c{display:flex;align-items:center;gap:6px;border:1px solid var(--line);
+  border-radius:20px;padding:5px 6px 5px 11px;font-size:12px;color:var(--dim)}
+.custlist .c button{background:none;border:none;color:var(--warn);font-size:14px;cursor:pointer;padding:0 4px;width:auto;margin:0}
+.notebtn{margin-top:10px;font-size:12px;color:var(--accent);background:none;border:none;
+  cursor:pointer;padding:4px 0;font-family:inherit;text-align:left;width:auto}
+.notewrap{display:none;margin-top:6px}
+.notewrap.open{display:block}
 
 /* ---- inputs ---- */
 input[type=text],input[type=number],input[type=time],textarea,select{
@@ -232,6 +246,7 @@ dialog::backdrop{background:rgba(0,0,0,.6)}
         <span><i class="dot" style="background:var(--breath)"></i>Breathing</span>
         <span><i class="dot" style="background:var(--head)"></i>Head</span>
         <span><i class="dot" style="background:var(--energy)"></i>Energy</span>
+        <span><i class="dot" style="background:var(--gut)"></i>Stomach</span>
       </div>
     </div>
     <div class="chartwrap">
@@ -285,7 +300,8 @@ var METRICS = [
   ["throat","Throat","var(--throat)"],
   ["breath","Breathing","var(--breath)"],
   ["head","Head pressure / dizziness","var(--head)"],
-  ["energy","Energy","var(--energy)"]
+  ["energy","Energy","var(--energy)"],
+  ["gut","Stomach / gut","var(--gut)"]
 ];
 var TPS = ["morning","midday","evening"];
 var WAKE = [["nightmare","Nightmare"],["bladder","Full bladder"],["random","Random"],["natural","Slept through"],["breathless","Breathless"]];
@@ -298,7 +314,7 @@ var LOAD = [["rest","Rested"],["light","Light activity"],["walk","Walked"],["wor
 
 /* ============ state ============ */
 var KEY = "symptomlog.v1";
-var DB = { v:1, days:{} };
+var DB = { v:1, days:{}, customSx:[] };
 var cur;
 var STORE = null;      // "local" | null
 var lastSaveOK = true;
@@ -355,7 +371,7 @@ function pad(n){ return (n<10?"0":"")+n; }
 function nowHM(){ var d=new Date(); return pad(d.getHours())+":"+pad(d.getMinutes()); }
 function $(id){ return document.getElementById(id); }
 
-function blankTP(){ var o={sx:[]}; METRICS.forEach(function(m){o[m[0]]=null;}); return o; }
+function blankTP(){ var o={sx:[],note:""}; METRICS.forEach(function(m){o[m[0]]=null;}); return o; }
 function day(d){
   if(!DB.days[d]){
     DB.days[d] = { sleep:{hours:null,wakes:null,reasons:[]},
@@ -363,7 +379,14 @@ function day(d){
       meals:[], episodes:[], weight:null, meds:[], load:[], notes:"" };
   }
   var D = DB.days[d];
-  TPS.forEach(function(t){ if(!D.tp[t]) D.tp[t]=blankTP(); });
+  if(!DB.customSx) DB.customSx=[];
+  TPS.forEach(function(t){
+    if(!D.tp[t]) D.tp[t]=blankTP();
+    var T=D.tp[t];
+    if(!T.sx) T.sx=[];
+    if(typeof T.note!=="string") T.note="";
+    METRICS.forEach(function(m){ if(!(m[0] in T)) T[m[0]]=null; });
+  });
   return D;
 }
 function flash(){ var s=$("saved"); s.classList.add("on"); setTimeout(function(){s.classList.remove("on");},700); }
@@ -426,13 +449,86 @@ TPS.forEach(function(tp){
     f.innerHTML='<div class="flabel"><i class="dot" style="background:'+m[2]+'"></i>'+m[1]+
       '<span class="val" id="v-'+tp+'-'+m[0]+'">—</span></div>'+
       '<div class="scale" id="sc-'+tp+'-'+m[0]+'"></div>'+
-      '<div class="hint"><span>'+(m[0]==="energy"?"0 none":"0 absent")+'</span><span>'+(m[0]==="energy"?"10 normal":"10 worst")+'</span></div>';
+      '<div class="hint"><span>'+(m[0]==="energy"?"0 none":"0 absent")+'</span><span>'+(m[0]==="energy"?"10 normal":"10 worst")+'</span></div>'+
+      (m[0]==="gut"?'<div class="mini">Fullness, bloating, mild pain, nausea, anything odd in the stomach — one combined number for how bad the gut is right now.</div>':'');
     body.appendChild(f);
   });
   var sf=document.createElement("div"); sf.className="field";
-  sf.innerHTML='<div class="flabel">Present right now</div><div class="chips" id="sx-'+tp+'"></div>';
+  sf.innerHTML='<div class="flabel">Present right now</div>'+
+    '<div class="chips" id="sx-'+tp+'"></div>'+
+    '<div class="addrow" id="sxadd-'+tp+'">'+
+      '<div class="r"><input type="text" id="sxin-'+tp+'" placeholder="new symptom, e.g. chest tightness" maxlength="40">'+
+      '<button class="btn" id="sxbtn-'+tp+'">Add</button></div>'+
+      '<div class="mini">Added symptoms appear in every time point, every day.</div>'+
+      '<div class="custlist" id="sxcust-'+tp+'"></div>'+
+    '</div>'+
+    '<button class="notebtn" id="notebtn-'+tp+'">＋ Note for this time point</button>'+
+    '<div class="notewrap" id="notewrap-'+tp+'"><textarea id="note-'+tp+'" placeholder="anything specific about '+tp+'"></textarea></div>';
   body.appendChild(sf);
 });
+
+/* ============ symptom chips with custom additions ============ */
+function sxRow(tp,D){
+  var wrap=$("sx-"+tp), addw=$("sxadd-"+tp), inp=$("sxin-"+tp), btn=$("sxbtn-"+tp), cust=$("sxcust-"+tp);
+  function draw(){
+    wrap.innerHTML="";
+    allSx().forEach(function(o){
+      var b=document.createElement("button");
+      b.className="chip"+(["presyncope","surge"].indexOf(o[0])>=0?" warnchip":"");
+      b.type="button"; b.textContent=o[1];
+      if(D.tp[tp].sx.indexOf(o[0])>=0) b.classList.add("on");
+      b.onclick=function(){
+        var v=D.tp[tp].sx, i=v.indexOf(o[0]);
+        if(i>=0) v.splice(i,1); else v.push(o[0]);
+        b.classList.toggle("on"); touched();
+      };
+      wrap.appendChild(b);
+    });
+    var plus=document.createElement("button");
+    plus.className="chip addchip"; plus.type="button"; plus.textContent="＋";
+    plus.title="Add your own symptom";
+    plus.onclick=function(){
+      addw.classList.toggle("open");
+      if(addw.classList.contains("open")){ drawCust(); inp.focus(); }
+    };
+    wrap.appendChild(plus);
+  }
+  function drawCust(){
+    cust.innerHTML="";
+    (DB.customSx||[]).forEach(function(o){
+      var d=document.createElement("span"); d.className="c";
+      d.appendChild(document.createTextNode(o[1]));
+      var x=document.createElement("button"); x.type="button"; x.textContent="✕";
+      x.title="Remove everywhere";
+      x.onclick=function(){
+        DB.customSx=DB.customSx.filter(function(q){return q[0]!==o[0];});
+        Object.keys(DB.days).forEach(function(dd){
+          TPS.forEach(function(t){
+            var T=DB.days[dd].tp && DB.days[dd].tp[t];
+            if(T&&T.sx){ var i=T.sx.indexOf(o[0]); if(i>=0) T.sx.splice(i,1); }
+          });
+        });
+        touched(); TPS.forEach(function(t){ if(window["__redraw_"+t]) window["__redraw_"+t](); });
+      };
+      d.appendChild(x); cust.appendChild(d);
+    });
+    if(!(DB.customSx||[]).length) cust.innerHTML='<span class="mini">Nothing added yet.</span>';
+  }
+  function add(){
+    var t=inp.value.trim();
+    if(!t) return;
+    if(allSx().some(function(o){return o[1].toLowerCase()===t.toLowerCase();})){ inp.value=""; return; }
+    DB.customSx.push([slug(t),t]);
+    inp.value="";
+    touched();
+    TPS.forEach(function(x){ if(window["__redraw_"+x]) window["__redraw_"+x](); });
+    drawCust();
+  }
+  btn.onclick=add;
+  inp.onkeydown=function(e){ if(e.key==="Enter"){ e.preventDefault(); add(); } };
+  window["__redraw_"+tp]=function(){ draw(); if(addw.classList.contains("open")) drawCust(); };
+  draw();
+}
 
 /* ============ wiring ============ */
 function bindAll(){
@@ -455,7 +551,18 @@ function bindAll(){
         $("v-"+tp+"-"+key).textContent = g()===null||g()===undefined?"—":g();
       })(m[0],m[2]);
     });
-    chipRow($("sx-"+tp),SX,function(){return D.tp[tp].sx;},function(v){D.tp[tp].sx=v;},true,["presyncope","surge"]);
+    sxRow(tp,D);
+    // note
+    var nb=$("notebtn-"+tp), nw=$("notewrap-"+tp), na=$("note-"+tp);
+    na.value = D.tp[tp].note || "";
+    nw.classList.toggle("open", !!na.value);
+    nb.textContent = na.value ? "− Hide note" : "＋ Note for this time point";
+    nb.onclick=function(){
+      nw.classList.toggle("open");
+      nb.textContent = nw.classList.contains("open") ? "− Hide note" : "＋ Note for this time point";
+      if(nw.classList.contains("open")) na.focus();
+    };
+    na.oninput=function(){ D.tp[tp].note=this.value; save(); flash(); };
   });
 
   // meals
@@ -532,6 +639,14 @@ function renderEpisodes(){
     d.querySelector(".del").onclick=function(){ D.episodes.splice(parseInt(this.dataset.i,10),1); renderEpisodes(); touched(); };
     h.appendChild(d);
   });
+}
+function allSx(){ return SX.concat(DB.customSx||[]); }
+function isCustom(k){ return (DB.customSx||[]).some(function(o){return o[0]===k;}); }
+function slug(t){
+  var b=t.toLowerCase().replace(/[^a-z0-9]+/g,"_").replace(/^_|_$/g,"").slice(0,24)||"sx";
+  var k=b,n=2;
+  while(allSx().some(function(o){return o[0]===k;})) k=b+"_"+(n++);
+  return k;
 }
 function lab(list,k){ for(var i=0;i<list.length;i++) if(list[i][0]===k) return list[i][1]; return ""; }
 function esc(s){ return String(s).replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c];}); }
@@ -664,15 +779,16 @@ function summary(){
   if(D.sleep.reasons.length) s.push(D.sleep.reasons.map(function(k){return lab(WAKE,k);}).join(", "));
   if(s.length) L.push("**Sleep:** "+s.join(" · "));
   L.push("");
-  L.push("| | Throat | Breathing | Head | Energy |");
-  L.push("|---|---|---|---|---|");
+  L.push("| | Throat | Breathing | Head | Stomach | Energy |");
+  L.push("|---|---|---|---|---|---|");
   TPS.forEach(function(t){
     var r=D.tp[t];
-    L.push("| "+t+" | "+f(r.throat)+" | "+f(r.breath)+" | "+f(r.head)+" | "+f(r.energy)+" |");
+    L.push("| "+t+" | "+f(r.throat)+" | "+f(r.breath)+" | "+f(r.head)+" | "+f(r.gut)+" | "+f(r.energy)+" |");
   });
   function f(v){ return (v===null||v===undefined)?"—":v; }
   TPS.forEach(function(t){
-    if(D.tp[t].sx.length) L.push("- **"+t+" symptoms:** "+D.tp[t].sx.map(function(k){return lab(SX,k);}).join(", "));
+    if(D.tp[t].sx.length) L.push("- **"+t+" symptoms:** "+D.tp[t].sx.map(function(k){return lab(allSx(),k);}).join(", "));
+    if(D.tp[t].note) L.push("- **"+t+" note:** "+D.tp[t].note);
   });
   if(D.meals.length){
     L.push(""); L.push("**Food**");
