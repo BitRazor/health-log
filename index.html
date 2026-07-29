@@ -100,6 +100,12 @@ textarea{resize:vertical;min-height:64px}
 .item .sub{font-size:12px;color:var(--dim);margin-top:3px}
 .del{margin-left:auto;background:none;border:none;color:var(--dimmer);font-size:16px;cursor:pointer;padding:0 2px}
 .del:active{color:var(--warn)}
+.edt{margin-left:auto;background:none;border:none;color:var(--accent);font-size:15px;cursor:pointer;padding:0 4px}
+.edt:active{opacity:.6}
+.edt ~ .del{margin-left:0}
+.item.editing{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent) inset}
+.btnrow{display:flex;gap:8px}
+.btnrow .btn{flex:1}
 .tag{font-size:10px;padding:2px 7px;border-radius:20px;border:1px solid var(--line);color:var(--dim)}
 .tag.r0{border-color:var(--energy);color:var(--energy)}
 .tag.r1{border-color:var(--throat);color:var(--throat)}
@@ -196,7 +202,10 @@ dialog::backdrop{background:rgba(0,0,0,.6)}
     <div class="field"><div class="flabel">Amount</div><div class="chips" id="m-amount"></div></div>
     <div class="field"><div class="flabel">Throat reaction within ~30 min</div><div class="chips" id="m-react"></div>
       <div class="mini">This is the liquid-vs-solid test. Same calories, different texture — does the reaction differ?</div></div>
-    <button class="btn" id="m-add">Add food entry</button>
+    <div class="btnrow">
+      <button class="btn" id="m-add">Add food entry</button>
+      <button class="btn ghost" id="m-cancel" style="display:none">Cancel</button>
+    </div>
     <div id="m-list"></div>
   </div>
 </section>
@@ -209,7 +218,7 @@ dialog::backdrop{background:rgba(0,0,0,.6)}
       <div><div class="flabel">Time</div><input type="time" id="e-time"></div>
       <div><div class="flabel">Minutes</div><input type="number" id="e-dur" placeholder="e.g. 15"></div>
     </div>
-    <div class="field"><div class="flabel">Type</div><div class="chips" id="e-type"></div>
+    <div class="field"><div class="flabel">What happened — pick everything that applied</div><div class="chips" id="e-type"></div>
       <div class="addrow" id="eadd">
         <div class="r"><input type="text" id="ein" placeholder="new episode type, e.g. cold sweat attack" maxlength="40">
         <button class="btn" id="ebtn">Add</button></div>
@@ -222,7 +231,10 @@ dialog::backdrop{background:rgba(0,0,0,.6)}
       <div class="hint"><span>0 mild</span><span>10 worst</span></div></div>
     <div class="field"><div class="flabel">Trigger / what came before</div><input type="text" id="e-trig" placeholder="after eating · sitting still · talking · nothing"></div>
     <div class="field"><div class="flabel">What stopped it</div><input type="text" id="e-stop" placeholder="moving · standing · time · water"></div>
-    <button class="btn" id="e-add">Add episode</button>
+    <div class="btnrow">
+      <button class="btn" id="e-add">Add episode</button>
+      <button class="btn ghost" id="e-cancel" style="display:none">Cancel</button>
+    </div>
     <div id="e-list"></div>
   </div>
 </section>
@@ -323,6 +335,8 @@ var LOAD = [["rest","Rested"],["light","Light activity"],["walk","Walked"],["wor
 var KEY = "symptomlog.v1";
 var DB = { v:1, days:{}, customSx:[], customEt:[] };
 var cur;
+var eEdit = null;      // index of the episode being edited, or null
+var mEdit = null;      // index of the food entry being edited, or null
 var STORE = null;      // "local" | null
 var lastSaveOK = true;
 
@@ -368,8 +382,18 @@ function storeStatus(){
   }
 }
 
+/* episodes used to hold a single `type`; they now hold a `types` array. */
+function migrateEpisodes(){
+  if(!DB||!DB.days) return;
+  Object.keys(DB.days).forEach(function(d){
+    (DB.days[d].episodes||[]).forEach(function(e){
+      if(!e.types) e.types = e.type ? [e.type] : [];
+    });
+  });
+}
 STORE = storeAvailable() ? "local" : null;
 loadStore();
+migrateEpisodes();
 cur = todayISO();
 
 function todayISO(){ var d=new Date(); return iso(d); }
@@ -540,13 +564,15 @@ function sxRow(tp,D){
 }
 
 /* ============ episode-type chips with custom additions ============ */
-function etypeRow(getter,setter){
+function etypeRow(getter){
   var wrap=$("e-type"), addw=$("eadd"), inp=$("ein"), btn=$("ebtn"), cust=$("ecust");
   var WARN=["laryngo","choke","sob","presyncope"];
   function usedCount(k){
     var n=0;
     Object.keys(DB.days).forEach(function(d){
-      (DB.days[d].episodes||[]).forEach(function(e){ if(e.type===k) n++; });
+      (DB.days[d].episodes||[]).forEach(function(e){
+        if((e.types||[]).indexOf(k)>=0 || e.type===k) n++;
+      });
     });
     return n;
   }
@@ -556,10 +582,11 @@ function etypeRow(getter,setter){
       var b=document.createElement("button");
       b.className="chip"+(WARN.indexOf(o[0])>=0?" warnchip":"");
       b.type="button"; b.textContent=o[1]; b.dataset.k=o[0];
-      if(getter()===o[0]) b.classList.add("on");
+      if(getter().indexOf(o[0])>=0) b.classList.add("on");
       b.onclick=function(){
-        setter(getter()===o[0]?null:o[0]);
-        syncChips(wrap,getter,false);
+        var v=getter(), i=v.indexOf(o[0]);
+        if(i>=0) v.splice(i,1); else v.push(o[0]);
+        b.classList.toggle("on");
       };
       wrap.appendChild(b);
     });
@@ -583,7 +610,8 @@ function etypeRow(getter,setter){
         var n=usedCount(o[0]);
         if(n){ toast("Used on "+n+" logged episode"+(n===1?"":"s")+" — kept"); return; }
         DB.customEt=DB.customEt.filter(function(q){return q[0]!==o[0];});
-        if(getter()===o[0]) setter(null);
+        var v=getter(), i=v.indexOf(o[0]);
+        if(i>=0) v.splice(i,1);
         touched(); draw(); drawCust();
       };
       d.appendChild(x); cust.appendChild(d);
@@ -594,11 +622,11 @@ function etypeRow(getter,setter){
     var t=inp.value.trim();
     if(!t) return;
     var dup=allEt().filter(function(o){return o[1].toLowerCase()===t.toLowerCase();})[0];
-    if(dup){ inp.value=""; setter(dup[0]); draw(); return; }
+    if(dup){ inp.value=""; if(getter().indexOf(dup[0])<0) getter().push(dup[0]); draw(); return; }
     var k=slugEt(t);
     DB.customEt.push([k,t]);
     inp.value="";
-    setter(k);
+    getter().push(k);
     touched(); draw(); drawCust();
   }
   btn.onclick=add;
@@ -610,6 +638,13 @@ function etypeRow(getter,setter){
 /* ============ wiring ============ */
 function bindAll(){
   var D=day(cur);
+
+  // any half-finished edit belongs to the day we just left
+  eEdit=null; mEdit=null;
+  $("e-add").textContent="Add episode"; $("e-cancel").style.display="none";
+  $("m-add").textContent="Add food entry"; $("m-cancel").style.display="none";
+  $("e-dur").value="";$("e-trig").value="";$("e-stop").value="";
+  $("m-what").value="";$("m-kcal").value="";
 
   // sleep
   $("sl-hours").value = D.sleep.hours===null?"":D.sleep.hours;
@@ -648,37 +683,88 @@ function bindAll(){
   chipRow($("m-amount"),AMOUNT,function(){return mt.amount;},function(v){mt.amount=v;},false);
   chipRow($("m-react"),REACT,function(){return mt.react;},function(v){mt.react=v;},false,["strong"]);
   if(!$("m-time").value) $("m-time").value=nowHM();
-  $("m-add").onclick=function(){
-    var what=$("m-what").value.trim();
-    if(!what){ $("m-what").focus(); return; }
-    D.meals.push({time:$("m-time").value||nowHM(),what:what,
-      kcal:$("m-kcal").value?parseInt($("m-kcal").value,10):null,
-      texture:mt.texture,amount:mt.amount,react:mt.react});
-    D.meals.sort(function(a,b){return a.time<b.time?-1:1;});
-    $("m-what").value=""; $("m-kcal").value=""; $("m-time").value=nowHM();
-    mt.texture=null;mt.amount=null;mt.react=null;
+  function mSync(){
     syncChips($("m-texture"),function(){return mt.texture;},false);
     syncChips($("m-amount"),function(){return mt.amount;},false);
     syncChips($("m-react"),function(){return mt.react;},false);
-    renderMeals(); touched();
+  }
+  function mReset(){
+    mEdit=null;
+    $("m-what").value=""; $("m-kcal").value=""; $("m-time").value=nowHM();
+    mt.texture=null;mt.amount=null;mt.react=null;
+    mSync();
+    $("m-add").textContent="Add food entry";
+    $("m-cancel").style.display="none";
+    renderMeals();
+  }
+  window.__mLoad=function(i){
+    var m=D.meals[i];
+    mEdit=i;
+    $("m-time").value=m.time||nowHM();
+    $("m-what").value=m.what||"";
+    $("m-kcal").value=(m.kcal===null||m.kcal===undefined)?"":m.kcal;
+    mt.texture=m.texture||null; mt.amount=m.amount||null; mt.react=m.react||null;
+    mSync();
+    $("m-add").textContent="Save changes";
+    $("m-cancel").style.display="";
+    renderMeals();
+    $("m-what").scrollIntoView({block:"center"});
+  };
+  window.__mReset=mReset;
+  $("m-cancel").onclick=mReset;
+  $("m-add").onclick=function(){
+    var what=$("m-what").value.trim();
+    if(!what){ $("m-what").focus(); return; }
+    var rec={time:$("m-time").value||nowHM(),what:what,
+      kcal:$("m-kcal").value?parseInt($("m-kcal").value,10):null,
+      texture:mt.texture,amount:mt.amount,react:mt.react};
+    if(mEdit!==null && D.meals[mEdit]) D.meals[mEdit]=rec;
+    else D.meals.push(rec);
+    D.meals.sort(function(a,b){return a.time<b.time?-1:1;});
+    mReset(); touched();
   };
 
   // episodes
-  var et={type:null,sev:null};
-  etypeRow(function(){return et.type;},function(v){et.type=v;});
+  var et={types:[],sev:null};
+  etypeRow(function(){return et.types;});
   scaleRow($("e-sev"),"var(--warn)",function(){return et.sev;},function(v){et.sev=v;});
   if(!$("e-time").value) $("e-time").value=nowHM();
-  $("e-add").onclick=function(){
-    if(!et.type){ $("e-type").scrollIntoView({block:"center"}); return; }
-    D.episodes.push({time:$("e-time").value||nowHM(),type:et.type,
-      dur:$("e-dur").value?parseInt($("e-dur").value,10):null,
-      sev:et.sev,trig:$("e-trig").value.trim(),stop:$("e-stop").value.trim()});
-    D.episodes.sort(function(a,b){return a.time<b.time?-1:1;});
+  function eReset(){
+    eEdit=null;
     $("e-dur").value="";$("e-trig").value="";$("e-stop").value="";$("e-time").value=nowHM();
-    et.type=null;et.sev=null;
-    syncChips($("e-type"),function(){return et.type;},false);
+    et.types=[];et.sev=null;
+    window.__redrawEt();
     syncScale($("e-sev"),"var(--warn)",function(){return et.sev;});
-    renderEpisodes(); touched();
+    $("e-add").textContent="Add episode";
+    $("e-cancel").style.display="none";
+    renderEpisodes();
+  }
+  window.__eLoad=function(i){
+    var e=D.episodes[i];
+    eEdit=i;
+    $("e-time").value=e.time||nowHM();
+    $("e-dur").value=(e.dur===null||e.dur===undefined)?"":e.dur;
+    $("e-trig").value=e.trig||""; $("e-stop").value=e.stop||"";
+    et.types=(e.types||(e.type?[e.type]:[])).slice();
+    et.sev=(e.sev===undefined)?null:e.sev;
+    window.__redrawEt();
+    syncScale($("e-sev"),"var(--warn)",function(){return et.sev;});
+    $("e-add").textContent="Save changes";
+    $("e-cancel").style.display="";
+    renderEpisodes();
+    $("e-type").scrollIntoView({block:"center"});
+  };
+  window.__eReset=eReset;
+  $("e-cancel").onclick=eReset;
+  $("e-add").onclick=function(){
+    if(!et.types.length){ $("e-type").scrollIntoView({block:"center"}); return; }
+    var rec={time:$("e-time").value||nowHM(),types:et.types.slice(),
+      dur:$("e-dur").value?parseInt($("e-dur").value,10):null,
+      sev:et.sev,trig:$("e-trig").value.trim(),stop:$("e-stop").value.trim()};
+    if(eEdit!==null && D.episodes[eEdit]) D.episodes[eEdit]=rec;
+    else D.episodes.push(rec);
+    D.episodes.sort(function(a,b){return a.time<b.time?-1:1;});
+    eReset(); touched();
   };
 
   // day
@@ -695,25 +781,41 @@ function bindAll(){
 function renderMeals(){
   var D=day(cur), h=$("m-list"); h.innerHTML="";
   D.meals.forEach(function(m,i){
-    var d=document.createElement("div"); d.className="item";
+    var d=document.createElement("div"); d.className="item"+(mEdit===i?" editing":"");
     var rc = m.react==="none"?"r0":m.react==="mild"?"r1":m.react==="strong"?"r2":"";
     d.innerHTML='<div class="top"><span class="t">'+m.time+'</span><span>'+esc(m.what)+'</span>'+
+      '<button class="edt" data-i="'+i+'" title="Edit">✎</button>'+
       '<button class="del" data-i="'+i+'">✕</button></div>'+
       '<div class="sub">'+[lab(TEXTURE,m.texture),lab(AMOUNT,m.amount),m.kcal?m.kcal+" kcal":""].filter(Boolean).join(" · ")+
       (m.react?' <span class="tag '+rc+'">'+lab(REACT,m.react)+'</span>':'')+'</div>';
-    d.querySelector(".del").onclick=function(){ D.meals.splice(parseInt(this.dataset.i,10),1); renderMeals(); touched(); };
+    d.querySelector(".edt").onclick=function(){ window.__mLoad(parseInt(this.dataset.i,10)); };
+    d.querySelector(".del").onclick=function(){
+      var k=parseInt(this.dataset.i,10);
+      D.meals.splice(k,1);
+      if(mEdit===k) window.__mReset();
+      else if(mEdit!==null && mEdit>k) mEdit--;
+      renderMeals(); touched();
+    };
     h.appendChild(d);
   });
 }
 function renderEpisodes(){
   var D=day(cur), h=$("e-list"); h.innerHTML="";
   D.episodes.forEach(function(e,i){
-    var d=document.createElement("div"); d.className="item";
-    d.innerHTML='<div class="top"><span class="t">'+e.time+'</span><span>'+lab(allEt(),e.type)+'</span>'+
+    var d=document.createElement("div"); d.className="item"+(eEdit===i?" editing":"");
+    d.innerHTML='<div class="top"><span class="t">'+e.time+'</span><span>'+esc(etLabels(e))+'</span>'+
       (e.sev!==null&&e.sev!==undefined?'<span class="tag r2">'+e.sev+'/10</span>':'')+
+      '<button class="edt" data-i="'+i+'" title="Edit">✎</button>'+
       '<button class="del" data-i="'+i+'">✕</button></div>'+
       '<div class="sub">'+[e.dur?e.dur+" min":"",e.trig?"trigger: "+esc(e.trig):"",e.stop?"stopped by: "+esc(e.stop):""].filter(Boolean).join(" · ")+'</div>';
-    d.querySelector(".del").onclick=function(){ D.episodes.splice(parseInt(this.dataset.i,10),1); renderEpisodes(); touched(); };
+    d.querySelector(".edt").onclick=function(){ window.__eLoad(parseInt(this.dataset.i,10)); };
+    d.querySelector(".del").onclick=function(){
+      var k=parseInt(this.dataset.i,10);
+      D.episodes.splice(k,1);
+      if(eEdit===k) window.__eReset();
+      else if(eEdit!==null && eEdit>k) eEdit--;
+      renderEpisodes(); touched();
+    };
     h.appendChild(d);
   });
 }
@@ -733,6 +835,10 @@ function slugEt(t){
   return k;
 }
 function lab(list,k){ for(var i=0;i<list.length;i++) if(list[i][0]===k) return list[i][1]; return ""; }
+function etLabels(e){
+  var L=allEt(), ks=e.types||(e.type?[e.type]:[]);
+  return ks.map(function(k){ return lab(L,k)||k; }).join(" + ");
+}
 function esc(s){ return String(s).replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c];}); }
 
 function renderBadges(){
@@ -849,7 +955,7 @@ function loadText(t){
   try{
     var o=JSON.parse(t);
     if(!o||!o.days) throw 0;
-    DB=o; save(); $("dlg").close(); $("dlg-ta").value="";
+    DB=o; migrateEpisodes(); save(); $("dlg").close(); $("dlg-ta").value="";
     bindAll(); storeStatus();
   }catch(e){ alert("That didn't parse as a saved log file."); }
 }
@@ -886,7 +992,7 @@ function summary(){
   if(D.episodes.length){
     L.push(""); L.push("**Episodes**");
     D.episodes.forEach(function(e){
-      L.push("- "+e.time+" — "+lab(allEt(),e.type)+(e.sev!==null&&e.sev!==undefined?" "+e.sev+"/10":"")+
+      L.push("- "+e.time+" — "+etLabels(e)+(e.sev!==null&&e.sev!==undefined?" "+e.sev+"/10":"")+
         (e.dur?", "+e.dur+" min":"")+(e.trig?", trigger: "+e.trig:"")+(e.stop?", stopped by: "+e.stop:""));
     });
   }
