@@ -106,6 +106,16 @@ textarea{resize:vertical;min-height:64px}
 .item.editing{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent) inset}
 .btnrow{display:flex;gap:8px}
 .btnrow .btn{flex:1}
+.chk{display:flex;align-items:center;gap:9px;margin-top:10px;font-size:13px;color:var(--dim);cursor:pointer}
+.chk input{width:19px;height:19px;accent-color:var(--accent);flex:none;margin:0}
+.perrow{margin-top:9px}
+.perrow .pl{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--dim);margin-bottom:4px}
+.perrow .pl b{color:var(--text);font-weight:600}
+.perrow .pv{margin-left:auto;font-variant-numeric:tabular-nums;color:var(--accent);font-weight:700}
+.item .sev2{font-size:12px;color:var(--dim);margin-top:3px}
+.item .enote{font-size:12px;color:var(--dim);margin-top:4px;white-space:pre-wrap;
+  border-left:2px solid var(--line);padding-left:8px}
+.tag.ong{background:#3a2a12;color:#e0b877;border:1px solid #5a4420}
 .tag{font-size:10px;padding:2px 7px;border-radius:20px;border:1px solid var(--line);color:var(--dim)}
 .tag.r0{border-color:var(--energy);color:var(--energy)}
 .tag.r1{border-color:var(--throat);color:var(--throat)}
@@ -218,6 +228,7 @@ dialog::backdrop{background:rgba(0,0,0,.6)}
       <div><div class="flabel">Time</div><input type="time" id="e-time"></div>
       <div><div class="flabel">Minutes</div><input type="number" id="e-dur" placeholder="e.g. 15"></div>
     </div>
+    <label class="chk"><input type="checkbox" id="e-ongoing"><span>Still going — I'll fill the length in later</span></label>
     <div class="field"><div class="flabel">What happened — pick everything that applied</div><div class="chips" id="e-type"></div>
       <div class="addrow" id="eadd">
         <div class="r"><input type="text" id="ein" placeholder="new episode type, e.g. cold sweat attack" maxlength="40">
@@ -226,11 +237,17 @@ dialog::backdrop{background:rgba(0,0,0,.6)}
         <div class="custlist" id="ecust"></div>
       </div>
     </div>
-    <div class="field"><div class="flabel">Severity</div>
+    <div class="field"><div class="flabel">Severity — the episode as a whole</div>
       <div class="scale" id="e-sev"></div>
       <div class="hint"><span>0 mild</span><span>10 worst</span></div></div>
+    <div class="field" id="e-perwrap" style="display:none">
+      <div class="flabel">And each one separately, if they differed</div>
+      <div id="e-per"></div>
+      <div class="mini">Optional. Leave blank if the number above says it.</div>
+    </div>
     <div class="field"><div class="flabel">Trigger / what came before</div><input type="text" id="e-trig" placeholder="after eating · sitting still · talking · nothing"></div>
     <div class="field"><div class="flabel">What stopped it</div><input type="text" id="e-stop" placeholder="moving · standing · time · water"></div>
+    <div class="field"><div class="flabel">Anything else about this episode</div><textarea id="e-note" placeholder="pulse, blood pressure, what it felt like, how long it took to settle"></textarea></div>
     <div class="btnrow">
       <button class="btn" id="e-add">Add episode</button>
       <button class="btn ghost" id="e-cancel" style="display:none">Cancel</button>
@@ -244,7 +261,8 @@ dialog::backdrop{background:rgba(0,0,0,.6)}
   <div class="shead"><span class="chev">▶</span><h2>Day summary</h2><span class="spacer"></span><span class="badge" id="b-day">—</span></div>
   <div class="sbody">
     <div class="grid2">
-      <div><div class="flabel">Weight (kg)</div><input type="number" id="d-weight" step="0.1" placeholder="85.0"></div>
+      <div><div class="flabel">Weight (kg)</div><input type="number" id="d-weight" step="0.1" placeholder="85.0">
+        <div class="mini">⭐ Same conditions every day — morning, after the toilet, before eating. Evening weight can read 1 kg higher and it is not a real change.</div></div>
       <div><div class="flabel">Total kcal</div><input type="number" id="d-kcal" readonly></div>
     </div>
     <div class="field"><div class="flabel">Medication taken</div><div class="chips" id="d-meds"></div></div>
@@ -388,6 +406,9 @@ function migrateEpisodes(){
   Object.keys(DB.days).forEach(function(d){
     (DB.days[d].episodes||[]).forEach(function(e){
       if(!e.types) e.types = e.type ? [e.type] : [];
+      if(!e.sevBy || typeof e.sevBy!=="object") e.sevBy = {};
+      if(typeof e.note!=="string") e.note = "";
+      if(typeof e.ongoing!=="boolean") e.ongoing = false;
     });
   });
 }
@@ -587,6 +608,7 @@ function etypeRow(getter){
         var v=getter(), i=v.indexOf(o[0]);
         if(i>=0) v.splice(i,1); else v.push(o[0]);
         b.classList.toggle("on");
+        if(window.__perDraw) window.__perDraw();
       };
       wrap.appendChild(b);
     });
@@ -622,12 +644,12 @@ function etypeRow(getter){
     var t=inp.value.trim();
     if(!t) return;
     var dup=allEt().filter(function(o){return o[1].toLowerCase()===t.toLowerCase();})[0];
-    if(dup){ inp.value=""; if(getter().indexOf(dup[0])<0) getter().push(dup[0]); draw(); return; }
+    if(dup){ inp.value=""; if(getter().indexOf(dup[0])<0) getter().push(dup[0]); draw(); if(window.__perDraw) window.__perDraw(); return; }
     var k=slugEt(t);
     DB.customEt.push([k,t]);
     inp.value="";
     getter().push(k);
-    touched(); draw(); drawCust();
+    touched(); draw(); drawCust(); if(window.__perDraw) window.__perDraw();
   }
   btn.onclick=add;
   inp.onkeydown=function(e){ if(e.key==="Enter"){ e.preventDefault(); add(); } };
@@ -725,29 +747,64 @@ function bindAll(){
   };
 
   // episodes
-  var et={types:[],sev:null};
+  var et={types:[],sev:null,sevBy:{}};
   etypeRow(function(){return et.types;});
   scaleRow($("e-sev"),"var(--warn)",function(){return et.sev;},function(v){et.sev=v;});
   if(!$("e-time").value) $("e-time").value=nowHM();
+
+  // one severity scale per selected type — only for the ones he picked
+  function perDraw(){
+    var host=$("e-per"), wrap=$("e-perwrap"), L=allEt();
+    wrap.style.display = et.types.length ? "" : "none";
+    Object.keys(et.sevBy).forEach(function(k){ if(et.types.indexOf(k)<0) delete et.sevBy[k]; });
+    host.innerHTML="";
+    et.types.forEach(function(k){
+      var row=document.createElement("div"); row.className="perrow";
+      row.innerHTML='<div class="pl"><b>'+esc(lab(L,k)||k)+'</b><span class="pv" id="pv-'+k+'">—</span></div>'+
+        '<div class="scale" id="ps-'+k+'"></div>';
+      host.appendChild(row);
+      (function(key){
+        var g=function(){ var v=et.sevBy[key]; return (v===undefined)?null:v; };
+        var s=function(v){
+          if(v===null) delete et.sevBy[key]; else et.sevBy[key]=v;
+          $("pv-"+key).textContent = v===null?"—":v;
+        };
+        scaleRow($("ps-"+key),"var(--warn)",g,s);
+        $("pv-"+key).textContent = g()===null?"—":g();
+      })(k);
+    });
+  }
+  window.__perDraw=perDraw;
+
   function eReset(){
     eEdit=null;
     $("e-dur").value="";$("e-trig").value="";$("e-stop").value="";$("e-time").value=nowHM();
-    et.types=[];et.sev=null;
-    window.__redrawEt();
+    $("e-note").value=""; $("e-ongoing").checked=false; $("e-dur").disabled=false;
+    et.types=[];et.sev=null;et.sevBy={};
+    window.__redrawEt(); perDraw();
     syncScale($("e-sev"),"var(--warn)",function(){return et.sev;});
     $("e-add").textContent="Add episode";
     $("e-cancel").style.display="none";
     renderEpisodes();
   }
+  $("e-ongoing").onchange=function(){
+    if(this.checked){ $("e-dur").value=""; $("e-dur").disabled=true; }
+    else $("e-dur").disabled=false;
+  };
   window.__eLoad=function(i){
     var e=D.episodes[i];
     eEdit=i;
     $("e-time").value=e.time||nowHM();
+    $("e-ongoing").checked=!!e.ongoing;
+    $("e-dur").disabled=!!e.ongoing;
     $("e-dur").value=(e.dur===null||e.dur===undefined)?"":e.dur;
     $("e-trig").value=e.trig||""; $("e-stop").value=e.stop||"";
+    $("e-note").value=e.note||"";
     et.types=(e.types||(e.type?[e.type]:[])).slice();
     et.sev=(e.sev===undefined)?null:e.sev;
-    window.__redrawEt();
+    et.sevBy={};
+    Object.keys(e.sevBy||{}).forEach(function(k){ et.sevBy[k]=e.sevBy[k]; });
+    window.__redrawEt(); perDraw();
     syncScale($("e-sev"),"var(--warn)",function(){return et.sev;});
     $("e-add").textContent="Save changes";
     $("e-cancel").style.display="";
@@ -758,14 +815,19 @@ function bindAll(){
   $("e-cancel").onclick=eReset;
   $("e-add").onclick=function(){
     if(!et.types.length){ $("e-type").scrollIntoView({block:"center"}); return; }
+    var ong=$("e-ongoing").checked;
+    var sb={}; Object.keys(et.sevBy).forEach(function(k){ sb[k]=et.sevBy[k]; });
     var rec={time:$("e-time").value||nowHM(),types:et.types.slice(),
-      dur:$("e-dur").value?parseInt($("e-dur").value,10):null,
-      sev:et.sev,trig:$("e-trig").value.trim(),stop:$("e-stop").value.trim()};
+      dur:(ong||!$("e-dur").value)?null:parseInt($("e-dur").value,10),
+      ongoing:ong,
+      sev:et.sev,sevBy:sb,trig:$("e-trig").value.trim(),stop:$("e-stop").value.trim(),
+      note:$("e-note").value.trim()};
     if(eEdit!==null && D.episodes[eEdit]) D.episodes[eEdit]=rec;
     else D.episodes.push(rec);
     D.episodes.sort(function(a,b){return a.time<b.time?-1:1;});
     eReset(); touched();
   };
+  perDraw();
 
   // day
   $("d-weight").value = D.weight===null?"":D.weight;
@@ -805,9 +867,13 @@ function renderEpisodes(){
     var d=document.createElement("div"); d.className="item"+(eEdit===i?" editing":"");
     d.innerHTML='<div class="top"><span class="t">'+e.time+'</span><span>'+esc(etLabels(e))+'</span>'+
       (e.sev!==null&&e.sev!==undefined?'<span class="tag r2">'+e.sev+'/10</span>':'')+
+      (e.ongoing?'<span class="tag ong">ongoing</span>':'')+
       '<button class="edt" data-i="'+i+'" title="Edit">✎</button>'+
       '<button class="del" data-i="'+i+'">✕</button></div>'+
-      '<div class="sub">'+[e.dur?e.dur+" min":"",e.trig?"trigger: "+esc(e.trig):"",e.stop?"stopped by: "+esc(e.stop):""].filter(Boolean).join(" · ")+'</div>';
+      '<div class="sub">'+[e.dur?e.dur+" min":(e.ongoing?"length not filled in yet":""),
+        e.trig?"trigger: "+esc(e.trig):"",e.stop?"stopped by: "+esc(e.stop):""].filter(Boolean).join(" · ")+'</div>'+
+      (etSevBreakdown(e)?'<div class="sev2">'+esc(etSevBreakdown(e))+'</div>':'')+
+      (e.note?'<div class="enote">'+esc(e.note)+'</div>':'');
     d.querySelector(".edt").onclick=function(){ window.__eLoad(parseInt(this.dataset.i,10)); };
     d.querySelector(".del").onclick=function(){
       var k=parseInt(this.dataset.i,10);
@@ -838,6 +904,13 @@ function lab(list,k){ for(var i=0;i<list.length;i++) if(list[i][0]===k) return l
 function etLabels(e){
   var L=allEt(), ks=e.types||(e.type?[e.type]:[]);
   return ks.map(function(k){ return lab(L,k)||k; }).join(" + ");
+}
+function etSevBreakdown(e){
+  var L=allEt(), sb=e.sevBy||{}, out=[];
+  (e.types||[]).forEach(function(k){
+    if(sb[k]!==undefined && sb[k]!==null) out.push((lab(L,k)||k)+" "+sb[k]+"/10");
+  });
+  return out.join(" · ");
 }
 function esc(s){ return String(s).replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c];}); }
 
@@ -992,8 +1065,12 @@ function summary(){
   if(D.episodes.length){
     L.push(""); L.push("**Episodes**");
     D.episodes.forEach(function(e){
-      L.push("- "+e.time+" — "+etLabels(e)+(e.sev!==null&&e.sev!==undefined?" "+e.sev+"/10":"")+
-        (e.dur?", "+e.dur+" min":"")+(e.trig?", trigger: "+e.trig:"")+(e.stop?", stopped by: "+e.stop:""));
+      var bd=etSevBreakdown(e);
+      L.push("- "+e.time+" — "+etLabels(e)+(e.sev!==null&&e.sev!==undefined?" **"+e.sev+"/10 overall**":"")+
+        (bd?" ("+bd+")":"")+
+        (e.dur?", "+e.dur+" min":(e.ongoing?", **still ongoing when logged**":""))+
+        (e.trig?", trigger: "+e.trig:"")+(e.stop?", stopped by: "+e.stop:""));
+      if(e.note) L.push("    - "+e.note);
     });
   }
   L.push("");
