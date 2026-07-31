@@ -210,6 +210,14 @@ dialog::backdrop{background:rgba(0,0,0,.6)}
     <div class="field"><div class="flabel">What</div><input type="text" id="m-what" placeholder="havregrøt with milk + honey"></div>
     <div class="field"><div class="flabel">Texture</div><div class="chips" id="m-texture"></div></div>
     <div class="field"><div class="flabel">Amount</div><div class="chips" id="m-amount"></div></div>
+    <div class="field"><div class="flabel">Throat RIGHT NOW, before eating<span class="val" id="v-m-before">—</span></div>
+      <div class="scale" id="sc-m-before"></div>
+      <div class="hint"><span>0 absent</span><span>10 worst</span></div>
+      <div class="mini">⭐ Your throat climbs through the day on its own. Without this number an evening reaction cannot be told apart from an evening throat.</div></div>
+    <div class="field"><div class="flabel">Throat ~30 min AFTER<span class="val" id="v-m-after">—</span></div>
+      <div class="scale" id="sc-m-after"></div>
+      <div class="hint"><span>0 absent</span><span>10 worst</span></div>
+      <div class="mini">Leave blank now and come back with ✎ in half an hour. The <b>change</b> is the measurement, not the level.</div></div>
     <div class="field"><div class="flabel">Throat reaction within ~30 min</div><div class="chips" id="m-react"></div>
       <div class="mini">This is the liquid-vs-solid test. Same calories, different texture — does the reaction differ?</div></div>
     <div class="btnrow">
@@ -404,6 +412,10 @@ function storeStatus(){
 function migrateEpisodes(){
   if(!DB||!DB.days) return;
   Object.keys(DB.days).forEach(function(d){
+    (DB.days[d].meals||[]).forEach(function(m){
+      if(m.tBefore===undefined) m.tBefore=null;
+      if(m.tAfter===undefined)  m.tAfter=null;
+    });
     (DB.days[d].episodes||[]).forEach(function(e){
       if(!e.types) e.types = e.type ? [e.type] : [];
       if(!e.sevBy || typeof e.sevBy!=="object") e.sevBy = {};
@@ -700,12 +712,20 @@ function bindAll(){
   });
 
   // meals
-  var mt={texture:null,amount:null,react:null};
+  var mt={texture:null,amount:null,react:null,tBefore:null,tAfter:null};
   chipRow($("m-texture"),TEXTURE,function(){return mt.texture;},function(v){mt.texture=v;},false);
   chipRow($("m-amount"),AMOUNT,function(){return mt.amount;},function(v){mt.amount=v;},false);
   chipRow($("m-react"),REACT,function(){return mt.react;},function(v){mt.react=v;},false,["strong"]);
+  scaleRow($("sc-m-before"),"var(--throat)",function(){return mt.tBefore;},
+    function(v){ mt.tBefore=v; $("v-m-before").textContent = v===null?"—":v; });
+  scaleRow($("sc-m-after"),"var(--throat)",function(){return mt.tAfter;},
+    function(v){ mt.tAfter=v; $("v-m-after").textContent = v===null?"—":v; });
   if(!$("m-time").value) $("m-time").value=nowHM();
   function mSync(){
+    syncScale($("sc-m-before"),"var(--throat)",function(){return mt.tBefore;});
+    syncScale($("sc-m-after"),"var(--throat)",function(){return mt.tAfter;});
+    $("v-m-before").textContent = mt.tBefore===null?"—":mt.tBefore;
+    $("v-m-after").textContent  = mt.tAfter===null?"—":mt.tAfter;
     syncChips($("m-texture"),function(){return mt.texture;},false);
     syncChips($("m-amount"),function(){return mt.amount;},false);
     syncChips($("m-react"),function(){return mt.react;},false);
@@ -713,7 +733,7 @@ function bindAll(){
   function mReset(){
     mEdit=null;
     $("m-what").value=""; $("m-kcal").value=""; $("m-time").value=nowHM();
-    mt.texture=null;mt.amount=null;mt.react=null;
+    mt.texture=null;mt.amount=null;mt.react=null;mt.tBefore=null;mt.tAfter=null;
     mSync();
     $("m-add").textContent="Add food entry";
     $("m-cancel").style.display="none";
@@ -726,6 +746,8 @@ function bindAll(){
     $("m-what").value=m.what||"";
     $("m-kcal").value=(m.kcal===null||m.kcal===undefined)?"":m.kcal;
     mt.texture=m.texture||null; mt.amount=m.amount||null; mt.react=m.react||null;
+    mt.tBefore=(m.tBefore===undefined)?null:m.tBefore;
+    mt.tAfter=(m.tAfter===undefined)?null:m.tAfter;
     mSync();
     $("m-add").textContent="Save changes";
     $("m-cancel").style.display="";
@@ -739,7 +761,8 @@ function bindAll(){
     if(!what){ $("m-what").focus(); return; }
     var rec={time:$("m-time").value||nowHM(),what:what,
       kcal:$("m-kcal").value?parseInt($("m-kcal").value,10):null,
-      texture:mt.texture,amount:mt.amount,react:mt.react};
+      texture:mt.texture,amount:mt.amount,react:mt.react,
+      tBefore:mt.tBefore,tAfter:mt.tAfter};
     if(mEdit!==null && D.meals[mEdit]) D.meals[mEdit]=rec;
     else D.meals.push(rec);
     D.meals.sort(function(a,b){return a.time<b.time?-1:1;});
@@ -849,7 +872,8 @@ function renderMeals(){
       '<button class="edt" data-i="'+i+'" title="Edit">✎</button>'+
       '<button class="del" data-i="'+i+'">✕</button></div>'+
       '<div class="sub">'+[lab(TEXTURE,m.texture),lab(AMOUNT,m.amount),m.kcal?m.kcal+" kcal":""].filter(Boolean).join(" · ")+
-      (m.react?' <span class="tag '+rc+'">'+lab(REACT,m.react)+'</span>':'')+'</div>';
+      (m.react?' <span class="tag '+rc+'">'+lab(REACT,m.react)+'</span>':'')+'</div>'+
+      (throatDelta(m)?'<div class="sev2">'+esc(throatDelta(m))+'</div>':'');
     d.querySelector(".edt").onclick=function(){ window.__mLoad(parseInt(this.dataset.i,10)); };
     d.querySelector(".del").onclick=function(){
       var k=parseInt(this.dataset.i,10);
@@ -904,6 +928,12 @@ function lab(list,k){ for(var i=0;i<list.length;i++) if(list[i][0]===k) return l
 function etLabels(e){
   var L=allEt(), ks=e.types||(e.type?[e.type]:[]);
   return ks.map(function(k){ return lab(L,k)||k; }).join(" + ");
+}
+function throatDelta(m){
+  if(m.tBefore===null||m.tBefore===undefined) return "";
+  if(m.tAfter===null||m.tAfter===undefined) return "throat "+m.tBefore+" → ?";
+  var d=m.tAfter-m.tBefore;
+  return "throat "+m.tBefore+" → "+m.tAfter+"  ("+(d>0?"+"+d:d===0?"no change":d)+")";
 }
 function etSevBreakdown(e){
   var L=allEt(), sb=e.sevBy||{}, out=[];
@@ -1057,7 +1087,8 @@ function summary(){
     L.push(""); L.push("**Food**");
     D.meals.forEach(function(m){
       L.push("- "+m.time+" — "+m.what+" ("+[lab(TEXTURE,m.texture),lab(AMOUNT,m.amount),m.kcal?m.kcal+" kcal":""].filter(Boolean).join(", ")+")"+
-        (m.react?" → **"+lab(REACT,m.react)+"**":""));
+        (m.react?" → **"+lab(REACT,m.react)+"**":"")+
+        (throatDelta(m)?"  ·  "+throatDelta(m):""));
     });
     var k=D.meals.reduce(function(a,m){return a+(m.kcal||0);},0);
     if(k) L.push("- **Total: "+k+" kcal**");
