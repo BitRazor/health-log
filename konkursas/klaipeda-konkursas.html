@@ -118,6 +118,11 @@ footer{border-top:1px solid var(--line);color:var(--muted);font-size:.82rem;padd
 .qnav{display:flex;gap:10px;margin-top:16px}
 .qnav .btn{flex:1;min-height:48px}
 .qbig{font-family:Charter,"Iowan Old Style",Cambria,Georgia,serif;font-size:2rem;color:var(--baltic-deep);margin:.2em 0}
+.fchips{display:flex;gap:6px;flex-wrap:wrap;margin:4px 0 12px}
+.fchip{border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:999px;
+  padding:6px 12px;font:inherit;font-size:.82rem;cursor:pointer;min-height:36px}
+.fchip:hover{border-color:var(--baltic)}
+.fchip.active{background:var(--baltic);border-color:var(--baltic);color:#fff;font-weight:600}
 /* ---------- home grid (mobile menu) ---------- */
 .home-grid{display:none;grid-template-columns:1fr 1fr;gap:10px;margin:0 0 16px}
 .hg{display:flex;flex-direction:column;gap:3px;background:var(--surface);border:1px solid var(--line);
@@ -212,7 +217,7 @@ footer{border-top:1px solid var(--line);color:var(--muted);font-size:.82rem;padd
     <button class="hg" data-go="teise"><span class="ic">📚</span><span class="t">Teisės aktai</span><span class="d">Įstatymų konspektai</span></button>
     <button class="hg" data-go="dydziai"><span class="ic">💶</span><span class="t">Dydžiai 2026</span><span class="d">Išmokų lentelės</span></button>
     <button class="hg" data-go="korteles"><span class="ic">🗂️</span><span class="t">Kortelės</span><span class="d">Greitas kartojimas</span></button>
-    <button class="hg" data-go="testas"><span class="ic">✅</span><span class="t">Testas</span><span class="d">30 klausimų</span></button>
+    <button class="hg" data-go="testas"><span class="ic">✅</span><span class="t">Testas</span><span class="d">66 klausimai pagal temas</span></button>
     <button class="hg" data-go="komisija"><span class="ic">🎤</span><span class="t">Komisija</span><span class="d">Klausimai ir atsakymai</span></button>
     <button class="hg" data-go="patirtis"><span class="ic">⭐</span><span class="t">Mano patirtis</span><span class="d">Personalizuota jums</span></button>
     <button class="hg" data-go="planas"><span class="ic">📅</span><span class="t">Planas</span><span class="d">14 dienų grafikas</span></button>
@@ -501,17 +506,24 @@ footer{border-top:1px solid var(--line);color:var(--muted);font-size:.82rem;padd
 <section class="panel" id="testas">
   <div class="card">
     <h2>Žinių testas</h2>
-    <p class="small">30 klausimų komisijos stiliumi — po vieną. Pasirinkite atsakymą: iškart matysite, ar teisingai, ir paaiškinimą. Rezultatas saugomas įrenginyje.</p>
+    <p class="small">66 klausimai komisijos stiliumi — po vieną, su temų filtrais ir tie patys faktai „iš kitos pusės” (duota suma — atspėkite išmoką; duota situacija — pritaikykite taisyklę). Pasirinkite atsakymą: iškart matysite, ar teisingai, ir paaiškinimą.</p>
+    <div class="fchips" id="qfchips"></div>
     <div class="qprog"><div class="meter"><span id="quizmeter" style="width:0%"></span></div><span class="qcount" id="quizcount"></span></div>
     <p><span class="score" id="quizscore"></span></p>
     <div id="quizbox"></div>
     <div class="qnav"><button class="btn secondary" id="qPrev">← Atgal</button><button class="btn" id="qNext">Toliau →</button></div>
-    <div class="btnrow"><button class="btn secondary" id="quizReset">Spręsti iš naujo</button></div>
+    <div class="btnrow"><button class="btn secondary" id="quizShuffle">🔀 Maišyti klausimus</button><button class="btn secondary" id="quizReset">Spręsti iš naujo</button></div>
   </div>
 </section>
 
 <!-- ============ KOMISIJA ============ -->
 <section class="panel" id="komisija">
+  <div class="card">
+    <h2>Pokalbio simuliacija</h2>
+    <p class="small">Atsitiktinai parenkami 8 klausimai iš visų 36 — kaskart kita kombinacija. Atsakykite garsiai (geriausia — įsirašykite telefonu), tada pasitikrinkite atsakymo planą.</p>
+    <div id="simbox"></div>
+    <div class="btnrow"><button class="btn" id="simStart">Pradėti simuliaciją</button></div>
+  </div>
   <div class="card">
     <h2>Tikėtini komisijos klausimai</h2>
     <p class="small">Prie kiekvieno klausimo — atsakymo planas. Rekomendacija: atsakykite garsiai, po to palyginkite su planu. Žymėkite, kuriuos jau repetavote.</p>
@@ -695,7 +707,44 @@ const CARDS=[
 ["Savivaldybės institucijos nuo 2023 m.?","Taryba (atstovaujamoji) ir <b>meras (vykdomoji institucija, savivaldybės vadovas)</b>; administracijos direktorius vadovauja administracijai"],
 ["Nuo 2026 m. pensijų fondų turtas vertinant paramą?","Įskaitomas į turtą/pajamas, IŠSKYRUS: paliatyvioji pagalba, sunki liga iš sąrašo, ≥70 % netektas dalyvumas"],
 ["Pašalpa 3 asmenų šeimai be pajamų (2026)?","256,30 + 230,67 + 179,41 = <b>666,38 €/mėn.</b>"],
-["Kur teikiami dokumentai konkursui į valstybės tarnybą?","Per Valstybės tarnybos portalą <b>portalas.vtd.lt</b> (Viešojo valdymo agentūra)"]
+["Kur teikiami dokumentai konkursui į valstybės tarnybą?","Per Valstybės tarnybos portalą <b>portalas.vtd.lt</b> (Viešojo valdymo agentūra)"],
+["ATVIRKŠČIAI: 129,50 €/mėn. — kuri išmoka?","<b>Išmoka vaikui</b> („vaiko pinigai”), 1,75 BSI"],
+["ATVIRKŠČIAI: 592 € — kuri išmoka?","<b>Laidojimo pašalpa</b>, 8 BSI"],
+["ATVIRKŠČIAI: 814 € — kuri išmoka?","<b>Vienkartinė išmoka gimus ar įvaikinus vaiką</b>, 11 BSI"],
+["ATVIRKŠČIAI: 5550 € — kuri išmoka?","<b>Vienkartinė išmoka įsikurti</b>, 75 BSI (buvusiems globotiniams)"],
+["ATVIRKŠČIAI: 148 € — kuri parama?","<b>Parama mokinio reikmenims</b>, 2 BSI (kartą per metus)"],
+["ATVIRKŠČIAI: 326,20 € — kas tai?","Maksimali <b>socialinė pašalpa vienam gyvenančiam</b> pirmus 6 mėn. (1,4 VRP)"],
+["ATVIRKŠČIAI: 666,38 € — kas tai?","Pašalpa <b>3 asmenų šeimai be pajamų</b> (256,30 + 230,67 + 179,41)"],
+["ATVIRKŠČIAI: 466 € — kur ši riba taikoma?","2 VRP: <b>papildomos išmokos vaikui</b> pajamų riba ir <b>šildymo kompensacijos</b> formulė bendrai gyvenantiems"],
+["ATVIRKŠČIAI: 699 € — kur taikoma?","3 VRP — <b>šildymo kompensacijos</b> formulėje vienam gyvenančiam asmeniui"],
+["ATVIRKŠČIAI: 569,40 € — kas tai?","<b>Pirmojo lygio slaugos</b> (individualios pagalbos) kompensacija, 2,6 TKB"],
+["ATVIRKŠČIAI: 1153 € ir 7,05 € — kas tai?","<b>MMA</b> ir minimalus <b>valandinis atlygis</b> nuo 2026-01-01"],
+["Kas tvirtina VRP, BSI ir MMA dydžius?","<b>LR Vyriausybė</b> (nutarimu, SADM teikimu)"],
+["Iki kada mokama išmoka vaikui?","Iki <b>18 m.</b>; iki <b>23 m.</b>, jei mokosi pagal bendrojo ugdymo ar profesinio mokymo programą"],
+["Kokiam laikotarpiui paprastai skiriama piniginė socialinė parama?","<b>3 mėnesiams</b>, nuo kreipimosi mėnesio pirmos dienos"],
+["Kokiais būdais galima pateikti prašymą?","Atvykus į skyrių, elektroniniu būdu per <b>spis.lt</b> arba per seniūniją"],
+["Kur apskųsti sprendimą dėl paramos?","Administracijos <b>direktoriui</b>, <b>administracinių ginčų komisijai</b> arba <b>administraciniam teismui</b>"],
+["Kas nutinka, jei asmuo neįsileidžia patikrinti buities sąlygų?","Parama gali būti <b>neskiriama arba nutraukiama</b> — sąlygų patikrinimas yra teisės į paramą sąlyga"],
+["Kada parama teikiama nepinigine forma?","Nustačius <b>piktnaudžiavimą</b> ar paramos naudojimą ne pagal paskirtį: maisto produktais, apmokant paslaugas tiesiogiai"],
+["Kas yra visuomenei naudinga veikla?","Neatlygintina veikla (iki nustatytų valandų), į kurią savivaldybė gali pasitelkti <b>darbingus pašalpos gavėjus</b>"],
+["Kas laukia ilgiau nei 12 mėn. pašalpą gaunančio darbingo asmens?","Pašalpa <b>laipsniškai mažinama</b> (skatinama grįžti į darbo rinką)"],
+["Kokia paskata įsidarbinusiam buvusiam pašalpos gavėjui?","<b>Papildoma socialinė pašalpa</b> (dalis buvusios pašalpos) iki 12 mėn. įsidarbinus"],
+["Kaip vertinamas turtas skiriant paramą?","Nekilnojamasis turtas, transporto priemonės, indėliai, vertybiniai popieriai — jei vertė <b>viršija normatyvą, parama neskiriama</b>"],
+["Kas priima valstybės tarnautoją į pareigas?","<b>Įstaigos vadovas</b> — savivaldybėje administracijos direktorius"],
+["Kaip priimamas karjeros valstybės tarnautojas?","<b>Konkurso būdu</b>, į pareigas <b>neterminuotam laikui</b>"],
+["Kas yra tarnybinis nusižengimas?","Tarnautojo <b>pareigų neatlikimas ar netinkamas atlikimas</b> dėl jo kaltės"],
+["Koks išbandymo laikotarpis šioje pareigybėje?","<b>3 mėnesiai</b>"],
+["Iš ko susideda tarnautojo darbo užmokestis?","<b>Pareiginė alga</b> (koeficientas × bazinis dydis) + priedai ir priemokos"],
+["Konstitucijos 38 straipsnis?","<b>Šeima — visuomenės ir valstybės pagrindas</b>; valstybė saugo ir globoja šeimą, motinystę, tėvystę ir vaikystę"],
+["Kada ir kaip priimta Konstitucija?","<b>1992 m. spalio 25 d. referendumu</b>"],
+["Koks mero statusas nuo 2023 m.?","Tiesiogiai renkamas <b>savivaldybės vadovas ir vykdomoji institucija</b>"],
+["Kas yra seniūnija?","Savivaldybės <b>administracijos filialas</b> (struktūrinis padalinys)"],
+["Pagrindinė asmens duomenų taisyklė skyriuje?","Tvarkyti tik <b>teisėtu pagrindu</b>, tik <b>būtina apimtimi</b>, užtikrinti konfidencialumą — ir po tarnybos"],
+["Kam taikoma tikslinių kompensacijų bazė (TKB)?","<b>Slaugos ir priežiūros (pagalbos)</b> tikslinėms kompensacijoms pagal pagalbos poreikio lygį"],
+["Socialinės paramos mokiniams pajamų riba?","<b>1,5 VRP</b> (349,50 €); išimtiniais atvejais, patikrinus buities sąlygas, — iki <b>2 VRP</b>"],
+["Karšto ir geriamojo vandens kompensacijų „grindys”?","Karštas — dalis, viršijanti <b>5 %</b> pajamų; geriamasis — viršijanti <b>2 %</b> pajamų"],
+["Kas grąžinama, jei parama gauta neteisėtai?","<b>Neteisėtai gauta suma išieškoma</b>; pareiškėjas atsako už pateiktų duomenų teisingumą"],
+["Nuo kada skiriama pašalpa, jei šeima kreipėsi rugpjūčio 20 d.?","Nuo <b>rugpjūčio 1 d.</b> — kreipimosi mėnesio pirmos dienos"]
 ];
 let cardOrder=store.get('cardorder',null),cardIdx=store.get('cardidx',0),cardKnown=store.get('cardknown',{}),flipped=false;
 if(!cardOrder||cardOrder.length!==CARDS.length){cardOrder=CARDS.map((_,i)=>i);cardIdx=0}
@@ -753,27 +802,92 @@ const QUIZ=[
 ["Konstitucijos straipsnis, laiduojantis socialinę paramą:",["38 str.","46 str.","52 str.","119 str."],2,"52 str. — pensijos ir socialinė parama nedarbo, ligos, našlystės, maitintojo netekimo atvejais."],
 ["Savivaldybės vykdomoji institucija nuo 2023 m.:",["Administracijos direktorius","Meras","Taryba","Seniūnas"],1,"Nuo 2023 m. meras — vykdomoji institucija ir savivaldybės vadovas."],
 ["Nuo 2026 m. pensijų fonduose sukauptas turtas vertinant paramą:",["Niekada neįskaitomas","Visada įskaitomas be išimčių","Įskaitomas, išskyrus paliatyviąją pagalbą, sunkią ligą iš sąrašo ar ≥70 % netektą dalyvumą","Įskaitoma tik pusė"],2,"Trys išimtys: siuntimas paliatyviajai pagalbai, sunki liga iš ministrų sąrašo, ≥70 % netektas dalyvumas."],
-["Buities ir gyvenimo sąlygų patikrinimo aktas surašomas:",["Tik teismo nurodymu","Patikrinus gyvenimo sąlygas, turtą ir užimtumą","Tik policijai dalyvaujant","Kas mėnesį visiems gavėjams"],1,"Aktas — pagrindas skirti paramą, ją nutraukti ar teikti nepinigine forma; tai tiesioginė šios pareigybės funkcija."]
+["Buities ir gyvenimo sąlygų patikrinimo aktas surašomas:",["Tik teismo nurodymu","Patikrinus gyvenimo sąlygas, turtą ir užimtumą","Tik policijai dalyvaujant","Kas mėnesį visiems gavėjams"],1,"Aktas — pagrindas skirti paramą, ją nutraukti ar teikti nepinigine forma; tai tiesioginė šios pareigybės funkcija."],
+["ATVIRKŠČIAI: kuri išmoka 2026 m. yra 592 €?",["Vienkartinė išmoka gimus vaikui","Laidojimo pašalpa","Parama mokinio reikmenims","Globos išmoka iki 6 m."],1,"Laidojimo pašalpa — 8 BSI = 592 €. Gimus vaikui — 814 €, reikmenims — 148 €, globos iki 6 m. — 384,80 €."],
+["ATVIRKŠČIAI: 129,50 € per mėnesį — tai:",["Papildoma išmoka vaikui","Išmoka vaikui („vaiko pinigai”)","Socialinė pašalpa vaikui","Globos išmokos tikslinis priedas"],1,"1,75 BSI = 129,50 € — universali išmoka vaikui be pajamų vertinimo."],
+["ATVIRKŠČIAI: 5550 € — tai:",["Vienkartinė išmoka įsikurti","Parama palaikams parvežti","Metinė socialinė pašalpa","Išmoka įvaikinus vaiką"],0,"75 BSI = 5550 € — vienkartinė išmoka įsikurti buvusiems globotiniams (nemokama grynaisiais)."],
+["ATVIRKŠČIAI: 466 € riba (2 VRP) taikoma:",["Laidojimo pašalpai","Papildomai išmokai vaikui ir šildymo kompensacijos formulei","MMA nustatymui","Slaugos kompensacijai"],1,"2 VRP = 466 €: papildomos išmokos vaikui pajamų riba ir šildymo formulės dydis kiekvienam bendrai gyvenančiam."],
+["SITUACIJA: vienas gyvenantis asmuo, pajamos 150 €, pašalpą gauna 3-ią mėnesį. Pašalpos dydis:",["326,20 €","176,20 €","106,30 €","233,00 €"],1,"Pirmus 6 mėn. — skirtumas tarp 1,4 VRP (326,20 €) ir pajamų: 326,20 − 150 = 176,20 €."],
+["SITUACIJA: 2 asmenų šeima be pajamų. Mėnesio pašalpa:",["512,60 €","486,97 €","466,00 €","435,74 €"],1,"256,30 (100 %) + 230,67 (90 %) = 486,97 €."],
+["SITUACIJA: 4 asmenų šeima be pajamų. Mėnesio pašalpa:",["845,79 €","1025,20 €","666,38 €","932,00 €"],0,"256,30 + 230,67 + 179,41 + 179,41 = 845,79 € (trečiam ir ketvirtam — po 70 %)."],
+["Piniginė socialinė parama paprastai skiriama laikotarpiui:",["1 mėnesiui","3 mėnesiams","6 mėnesiams","12 mėnesių"],1,"Skiriama 3 mėnesiams nuo kreipimosi mėnesio pirmos dienos; vėliau teikiamas naujas prašymas."],
+["Dėl laidojimo pašalpos reikia kreiptis per:",["3 mėnesius","6 mėnesius","12 mėnesių","24 mėnesius"],2,"Per 12 mėnesių nuo mirties dienos."],
+["Išmoka vaikui mokama iki:",["16 metų","18 m. (arba iki 23 m., jei mokosi pagal bendrojo ugdymo ar profesinio mokymo programą)","21 metų visais atvejais","24 metų"],1,"Bendra riba — 18 m.; besimokantiems pagal bendrojo ugdymo ar profesinio mokymo programas — iki 23 m."],
+["VRP ir BSI dydžius tvirtina:",["Seimas","LR Vyriausybė","SADM ministras","Savivaldybės taryba"],1,"Dydžius nutarimu tvirtina Vyriausybė socialinės apsaugos ir darbo ministro teikimu."],
+["Sprendimą dėl paramos galima apskųsti:",["Tik teismui","Administracijos direktoriui, administracinių ginčų komisijai arba administraciniam teismui","Tik merui","Niekur — sprendimas galutinis"],1,"Apskundimo tvarka nurodoma pačiame sprendime — tai VAĮ reikalavimas."],
+["Prašymą dėl paramos galima pateikti:",["Tik atvykus į skyrių","Tik el. būdu per spis.lt","Atvykus į skyrių, per spis.lt arba per seniūniją","Tik registruotu paštu"],2,"Visi trys būdai galimi; el. prašymai teikiami per SPIS (spis.lt)."],
+["Duomenys apie pareiškėjo pajamas iš SODROS ir VMI gaunami:",["Pareiškėjas pats pristato pažymas","Automatiškai per SPIS pagal duomenų teikimo sutartis","Skambinant telefonu","Iš viešų šaltinių"],1,"„Vieno langelio” principas: įstaiga duomenis surenka pati — asmeniui pažymų nešti nereikia."],
+["SITUACIJA: pareiškėjo turto vertė viršija normatyvą. Sprendimo projektas:",["Skirti pusę pašalpos","Parama neskiriama, kol turtas viršija normatyvą","Skirti, bet tikrinti kas mėnesį","Skirti nepinigine forma"],1,"Turto normatyvo viršijimas — pagrindas neskirti piniginės socialinės paramos."],
+["SITUACIJA: įtariate, kad gavėjas nuslėpė darbo pajamas. Pirmas žingsnis:",["Iškart nutraukti paramą","Patikrinti duomenis registruose ir paprašyti asmens paaiškinimo","Pranešti policijai","Nieko nedaryti"],1,"Sprendimai grindžiami faktais: registrų duomenys, asmens paaiškinimas, prireikus — buities patikrinimas; tik tada — perskaičiavimas ir išieškojimas."],
+["Nustačius piktnaudžiavimą, parama gali būti teikiama:",["Didesne suma","Nepinigine forma (maisto produktais, apmokant paslaugas)","Tik grynaisiais","Nebeteikiama niekada"],1,"PSPNGĮ leidžia paramą teikti nepinigine forma, kad ji pasiektų tikslą (pvz., vaikų poreikius)."],
+["Valstybės tarnautoją į pareigas priima:",["Savivaldybės taryba","Meras visais atvejais","Įstaigos vadovas (administracijos direktorius)","Viešojo valdymo agentūra"],2,"Administracijos tarnautojus skiria administracijos direktorius — įstaigos vadovas."],
+["Karjeros valstybės tarnautojas priimamas:",["Politinio pasitikėjimo pagrindu","Konkurso būdu į pareigas neterminuotam laikui","Pagal terminuotą darbo sutartį","Rotacijos būdu"],1,"Karjeros tarnautojo esmė — konkursas ir neterminuotas priėmimas."],
+["Savivaldybės administracijai vadovauja:",["Meras","Tarybos pirmininkas","Administracijos direktorius","Seniūnas"],2,"Direktorius — įstaigos vadovas, politinio (asmeninio) pasitikėjimo tarnautojas; meras — savivaldybės vadovas."],
+["Seniūnija yra:",["Savarankiškas juridinis asmuo","Savivaldybės administracijos filialas (struktūrinis padalinys)","Valstybinė įstaiga","Nevyriausybinė organizacija"],1,"Seniūnija — administracijos filialas, jai vadovauja seniūnas."],
+["Konstitucija priimta:",["1990-03-11 Seime","1992-10-25 referendumu","1991-01-13","2004-05-01"],1,"Konstitucija priimta 1992 m. spalio 25 d. piliečių referendumu."],
+["„Šeima — visuomenės ir valstybės pagrindas” — tai Konstitucijos:",["38 straipsnis","52 straipsnis","23 straipsnis","119 straipsnis"],0,"38 str. — šeima; 52 str. — pensijos ir socialinė parama; 119 str. — savivalda."],
+["Skyriaus darbuotojas asmens duomenis tretiesiems asmenims gali teikti:",["Bet kam paprašius","Tik esant teisiniam pagrindui","Visada, jei prašo giminaitis","Už mokestį"],1,"BDAR: tik teisėtu pagrindu (įstatymas, sutartis, asmens sutikimas). Net giminaičiui — ne be pagrindo."],
+["MMA nuo 2026-01-01:",["1038 €","1100 €","1153 €","1210 €"],2,"MMA — 1153 €, minimalus valandinis atlygis — 7,05 €."],
+["Pirmojo lygio individualios pagalbos (slaugos) kompensacija 2026 m.:",["416,10 €","540,80 €","569,40 €","592,00 €"],2,"2,6 TKB = 2,6 × 219 = 569,40 €."],
+["Ilgiau kaip 12 mėn. pašalpą gaunančiam darbingam asmeniui pašalpa:",["Didinama","Laipsniškai mažinama","Nesikeičia","Automatiškai sustabdoma"],1,"Vienam gyvenančiam: 1,4 VRP → 1,2 VRP (po 6 mėn.) → 1,1 VRP (po 12 mėn.) — skatinama dirbti."],
+["Buvusiam gavėjui įsidarbinus gali būti skiriama:",["Nieko papildomai","Papildoma socialinė pašalpa (skatinamoji) iki 12 mėn.","Vienkartinė premija","Kuro kompensacija"],1,"Įsidarbinus mokama papildoma pašalpa — finansinė paskata dirbti."],
+["Papildomos išmokos vaikui pajamų riba vienam asmeniui 2026 m.:",["233 €","349,50 €","466 €","699 €"],2,"2 VRP = 466 € (1–2 vaikus auginančioms šeimoms; 3+ vaikų ir vaikams su negalia — be testo)."],
+["Globos išmokos tikslinis priedas, kai globa nustatyta šeimoje:",["2 BSI","4 BSI (296 €)","6 BSI","8 BSI"],1,"Priedas 4 BSI = 296 € mokamas papildomai prie globos išmokos."],
+["SITUACIJA: asmuo atsisako įsileisti patikrinti buities sąlygų. Pasekmė:",["Jokių pasekmių","Parama gali būti neskiriama arba nutraukiama","Skiriama bauda","Kreipiamasi į teismą"],1,"Sudaryti sąlygas patikrinti gyvenimo sąlygas — pareiškėjo pareiga; atsisakius, parama neskiriama."],
+["Administracinė procedūra pagal VAĮ gali būti pratęsta:",["Iki 10 darbo dienų","Iki 30 dienų","Neribotai","Negali būti pratęsta"],0,"Bazinis terminas — 20 d. d., motyvuotai pratęsiama iki 10 d. d."],
+["Tarnybinis nusižengimas — tai:",["Bet kokia klaida darbe","Tarnautojo pareigų neatlikimas ar netinkamas atlikimas dėl jo kaltės","Vėlavimas 5 minutes","Atostogų prašymas"],1,"Už tarnybinį nusižengimą skiriama nuobauda: pastaba, papeikimas arba atleidimas."],
+["Nemokamų pietų dydis 5–12 kl. mokiniui per dieną 2026 m.:",["2,07 €","3,33 €","3,70 €","7,18 €"],2,"5 % BSI = 3,70 €; priešmokyklinukams ir pradinukams — 4,5 % BSI (3,33 €); stovyklose — 9,7 % (7,18 €)."],
+["SITUACIJA: šeima kreipėsi rugpjūčio 20 d. Nuo kada skiriama pašalpa?",["Nuo rugsėjo 1 d.","Nuo rugpjūčio 1 d. — kreipimosi mėnesio pirmos dienos","Nuo rugpjūčio 20 d.","Nuo sprendimo priėmimo dienos"],1,"Parama skiriama nuo kreipimosi mėnesio pirmos dienos."],
+["SITUACIJA: vienas gyvenantis pensininkas, pajamos 400 €. Šildymo kompensacija:",["Nepriklauso — pajamos per didelės","Priklauso: pajamos (400 €) mažesnės už 3 VRP (699 €), tad kompensuojamos visos normatyvinės šildymo išlaidos","Priklauso 50 % išlaidų","Pensininkams netaikoma"],1,"Kai pajamos neviršija 3 VRP, 10 % skirtumo = 0, todėl kompensuojama visa šildymo išlaidų dalis už normatyvinį plotą."]
 ];
+const QCATS=["dydziai","dydziai","parama","parama","parama","parama","parama","parama","parama","parama",
+"vaikai","vaikai","vaikai","vaikai","vaikai","vaikai","vaikai","vaikai","admin","parama",
+"parama","parama","admin","admin","admin","admin","admin","admin","parama","parama",
+"dydziai","dydziai","dydziai","dydziai","situacijos","situacijos","situacijos","parama","vaikai","vaikai",
+"admin","parama","parama","parama","situacijos","situacijos","parama","admin","admin","admin",
+"admin","admin","admin","admin","dydziai","dydziai","parama","parama","vaikai","vaikai",
+"situacijos","admin","admin","dydziai","situacijos","situacijos"];
+const QFILTERS=[["visi","Visi"],["dydziai","Dydžiai"],["parama","Pašalpa ir kompensacijos"],["vaikai","Išmokos vaikams"],["admin","Administravimas"],["situacijos","Situacijos"]];
 let quizState=store.get('quiz',{});
-let quizIdx=Math.min(store.get('quizidx',0),QUIZ.length);
+let quizFilter=store.get('quizfilter','visi');
+if(!QFILTERS.some(f=>f[0]===quizFilter))quizFilter='visi';
+let activeList=[];
+function buildList(){
+  activeList=QUIZ.map((_,i)=>i).filter(i=>quizFilter==='visi'||QCATS[i]===quizFilter);
+}
+buildList();
+let quizIdx=Math.min(store.get('quizidx.'+quizFilter,0),activeList.length);
 const quizbox=document.getElementById('quizbox');
 const qPrev=document.getElementById('qPrev'),qNext=document.getElementById('qNext');
+const fchips=document.getElementById('qfchips');
+QFILTERS.forEach(f=>{
+  const b=document.createElement('button');b.className='fchip';b.dataset.f=f[0];
+  b.textContent=f[1];
+  b.addEventListener('click',()=>{
+    quizFilter=f[0];store.set('quizfilter',quizFilter);
+    buildList();
+    quizIdx=Math.min(store.get('quizidx.'+quizFilter,0),activeList.length);
+    renderQuiz();
+  });
+  fchips.appendChild(b);
+});
 function quizStats(){
   let answered=0,correct=0,wrong=[];
-  QUIZ.forEach((q,qi)=>{const st=quizState[qi];
-    if(st!==undefined){answered++;if(st===q[2])correct++;else wrong.push(qi+1)}});
+  activeList.forEach((mi,pos)=>{const st=quizState[mi];
+    if(st!==undefined){answered++;if(st===QUIZ[mi][2])correct++;else wrong.push(pos+1)}});
   return {answered,correct,wrong};
 }
 function renderQuiz(){
+  const N=activeList.length;
   const {answered,correct,wrong}=quizStats();
-  document.getElementById('quizmeter').style.width=(answered/QUIZ.length*100)+'%';
-  document.getElementById('quizcount').textContent=(quizIdx>=QUIZ.length?QUIZ.length:quizIdx+1)+' / '+QUIZ.length;
+  document.querySelectorAll('.fchip').forEach(b=>b.classList.toggle('active',b.dataset.f===quizFilter));
+  document.getElementById('quizmeter').style.width=(N?answered/N*100:0)+'%';
+  document.getElementById('quizcount').textContent=(quizIdx>=N?N:quizIdx+1)+' / '+N;
   document.getElementById('quizscore').textContent=answered?('Teisingi: '+correct+' / '+answered+' ('+Math.round(correct/answered*100)+' %)'):'';
   quizbox.innerHTML='';
-  if(quizIdx>=QUIZ.length){
+  if(quizIdx>=N){
     const div=document.createElement('div');div.className='q';
-    const done=answered===QUIZ.length;
+    const done=answered===N;
     const pct=answered?Math.round(correct/answered*100):0;
     let msg=pct>=90?'Puiku — esate pasiruošę!':pct>=70?'Gerai — pakartokite klystamas temas.':'Verta dar kartą peržiūrėti konspektus.';
     div.innerHTML='<h3>'+(done?'Testas baigtas':'Pabaiga — dar liko neatsakytų klausimų')+'</h3>'
@@ -782,7 +896,7 @@ function renderQuiz(){
       +(wrong.length?'<p class="small">Suklydote klausimuose: '+wrong.join(', ')+'. Grįžkite mygtuku „Atgal” ir peržiūrėkite paaiškinimus.</p>':'');
     quizbox.appendChild(div);
   }else{
-    const q=QUIZ[quizIdx],st=quizState[quizIdx];
+    const mi=activeList[quizIdx],q=QUIZ[mi],st=quizState[mi];
     const div=document.createElement('div');div.className='q';
     const h=document.createElement('h3');h.textContent=(quizIdx+1)+'. '+q[0];div.appendChild(h);
     const opts=document.createElement('div');opts.className='opts';
@@ -793,7 +907,7 @@ function renderQuiz(){
         if(oi===q[2])b.classList.add('correct');
         else if(oi===st&&st!==q[2])b.classList.add('wrong');
       }else{
-        b.addEventListener('click',()=>{quizState[quizIdx]=oi;store.set('quiz',quizState);renderQuiz()});
+        b.addEventListener('click',()=>{quizState[mi]=oi;store.set('quiz',quizState);renderQuiz()});
       }
       opts.appendChild(b);
     });
@@ -802,13 +916,19 @@ function renderQuiz(){
     quizbox.appendChild(div);
   }
   qPrev.disabled=quizIdx===0;
-  qNext.disabled=quizIdx>=QUIZ.length;
-  qNext.textContent=quizIdx>=QUIZ.length-1?'Rezultatas':(quizState[quizIdx]===undefined?'Praleisti →':'Toliau →');
+  qNext.disabled=quizIdx>=N;
+  qNext.textContent=quizIdx>=N-1?'Rezultatas':(quizState[activeList[quizIdx]]===undefined?'Praleisti →':'Toliau →');
 }
-qPrev.addEventListener('click',()=>{if(quizIdx>0){quizIdx--;store.set('quizidx',quizIdx);renderQuiz()}});
-qNext.addEventListener('click',()=>{if(quizIdx<QUIZ.length){quizIdx++;store.set('quizidx',quizIdx);renderQuiz()}});
+qPrev.addEventListener('click',()=>{if(quizIdx>0){quizIdx--;store.set('quizidx.'+quizFilter,quizIdx);renderQuiz()}});
+qNext.addEventListener('click',()=>{if(quizIdx<activeList.length){quizIdx++;store.set('quizidx.'+quizFilter,quizIdx);renderQuiz()}});
+document.getElementById('quizShuffle').addEventListener('click',()=>{
+  for(let i=activeList.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));
+    [activeList[i],activeList[j]]=[activeList[j],activeList[i]]}
+  quizIdx=0;store.set('quizidx.'+quizFilter,0);renderQuiz();window.scrollTo({top:0});
+});
 document.getElementById('quizReset').addEventListener('click',()=>{
-  quizState={};quizIdx=0;store.set('quiz',quizState);store.set('quizidx',0);renderQuiz();window.scrollTo({top:0})});
+  activeList.forEach(mi=>delete quizState[mi]);
+  quizIdx=0;store.set('quiz',quizState);store.set('quizidx.'+quizFilter,0);renderQuiz();window.scrollTo({top:0})});
 renderQuiz();
 
 /* ---------- commission questions ---------- */
@@ -856,7 +976,35 @@ const COMM=[
 ["Kokie Jūsų lūkesčiai dėl darbo užmokesčio?",
 "Skelbime nurodytas koeficientų intervalas (0,92–1,52 BD, ≈1642–2714 € bruto) — pasakykite, kad susipažinote ir intervalas jums priimtinas; konkretų koeficientą nustato įstaiga pagal patirtį. Tai parodo, kad domėjotės sąlygomis ir esate realistas."],
 ["Ar turite klausimų mums? (beveik visada klausia pabaigoje)",
-"Visada turėkite 2–3: „Kaip organizuojama naujoko adaptacija ir mentorystė?”, „Kokie skyriaus didžiausi iššūkiai šiuo metu — ar auga prašymų srautas?”, „Kaip atrodo tipinė specialisto diena — kiek laiko aptarnavimui, kiek sprendimams?” Venkite klausimų tik apie atostogas."]
+"Visada turėkite 2–3: „Kaip organizuojama naujoko adaptacija ir mentorystė?”, „Kokie skyriaus didžiausi iššūkiai šiuo metu — ar auga prašymų srautas?”, „Kaip atrodo tipinė specialisto diena — kiek laiko aptarnavimui, kiek sprendimams?” Venkite klausimų tik apie atostogas."],
+["Pastebėjote, kad Jūsų pačios (paties) parengtame sprendime — klaida. Ką darysite?",
+"Prisiimti atsakomybę iš karto: informuoti vadovą, inicijuoti sprendimo pakeitimą/panaikinimą teisės aktų tvarka, informuoti asmenį, jei klaida jį paveikė. Akcentas: klaidos taisymas laiku — profesionalumo, ne silpnumo ženklas; apskaitoje išmokote, kad nuslėpta klaida visada kainuoja brangiau."],
+["Prašymą pateikia Jūsų giminaitis ar geras pažįstamas. Kaip elgsitės?",
+"Interesų konfliktas: nusišalinti nuo šio prašymo nagrinėjimo, raštu informuoti tiesioginį vadovą (Viešųjų ir privačių interesų derinimo įstatymas). Prašymą nagrinėja kitas specialistas. Paminėkite, kad interesus deklaruosite ir bendrąja tvarka (ID deklaracija)."],
+["Priimamajame asmuo pravirko / ištiko emocinė krizė. Jūsų veiksmai?",
+"Iš darbo su rizikos šeimomis: leisti nusiraminti, kalbėti ramiai, neskubinti; pasiūlyti vandens, privatesnę erdvę; tada padėti suformuluoti, ko asmeniui reikia; prireikus nukreipti į socialines paslaugas ar psichologinę pagalbą. Žmogus krizėje pirmiausia turi būti išgirstas — tik tada tvarkomi dokumentai."],
+["Vienu metu: eilė interesantų, neveikia SPIS, o vadovas prašo skubios ataskaitos. Ką darysite?",
+"Parodykite šaltą galvą: 1) informuoti laukiančius apie sutrikimą ir priimti prašymus popieriuje (registruoti vėliau); 2) suderinti su vadovu realų ataskaitos terminą; 3) apie SPIS sutrikimą pranešti atsakingiems. Esmė — žmonės neišsiunčiami namo, terminai nesužlugdomi, problemos komunikuojamos, o ne slepiamos."],
+["Kuo skiriasi socialinė pašalpa nuo išmokos vaikui?",
+"Pašalpa — pagal PSPNGĮ, tikrinamos pajamos ir turtas, savarankiškoji savivaldybės funkcija iš savivaldybės biudžeto, dydis — VRP pagrindu. Išmoka vaikui — pagal Išmokų vaikams įstatymą, universali (be pajamų testo), valstybinė (perduota) funkcija iš valstybės biudžeto, dydis — BSI pagrindu (1,75 BSI = 129,50 €). Toks palyginimas parodo sisteminį supratimą."],
+["Kodėl skiriant paramą vertinamas ne tik pajamos, bet ir turtas?",
+"Paramos tikslas — padėti tiems, kurie objektyviai neturi išteklių. Vien pajamų testas leistų paramą gauti turtingiems, bet formaliai pajamų neturintiems asmenims (pvz., turintiems kelis NT objektus). Turto vertinimas užtikrina teisingumą ir racionalų biudžeto lėšų naudojimą — mokesčių mokėtojų pinigai skiriami tiems, kam jų iš tiesų reikia."],
+["Paaiškinkite šildymo kompensaciją senyvo amžiaus žmogui paprastais žodžiais.",
+"Treniruokitės versti įstatymo kalbą į žmonių kalbą: „Jei Jūsų pajamos nedidelės, valstybė padengia dalį šildymo sąskaitos. Skaičiuojame taip: iš Jūsų pajamų atimame 699 €; jei pajamos mažesnės — kompensuojame beveik viską; jei didesnės — Jūs mokate tik 10 % to skirtumo, likusią normatyvinę dalį dengia savivaldybė. Atsineškite pajamas patvirtinančius dokumentus, visa kita patikrinsime patys.”"],
+["Kolega pataria: „nesivargink su tuo buities patikrinimu, surašyk iš akies”. Jūsų reakcija?",
+"Etikos testas: mandagiai atsisakyti — aktas yra oficialus dokumentas, sprendimo pagrindas; fiktyvus aktas — tarnybinis nusižengimas ir galimai nusikaltimas. Patikrinimą atlikti pagal tvarką. Jei spaudimas kartotųsi — informuoti vadovą. Svarbu parodyti: lojalumas kolegoms nereiškia taisyklių laužymo."],
+["Kaip priimate kritiką ir grįžtamąjį ryšį?",
+"Konkretus pavyzdys iš patirties: pvz., vadovo pastaba dėl ataskaitos formos ar socialinio darbo metodų — ką pakeitėte po jos. Formulė: išklausau → patikslinu, ką konkrečiai daryti kitaip → pritaikau → pasitikrinu, ar pavyko. Kritika — nemokamas mokymas, ypač naujoje srityje, kur pirmus mėnesius jos bus daug."],
+["Ką Jums praktiškai reiškia tarnautojo nešališkumas?",
+"Vienodas elgesys su visais: sprendimą lemia tik faktai ir teisės aktai, ne simpatijos, pažintys ar asmens elgesys priimamajame. Pavyzdys iš rizikos šeimų: dirbote ir su maloniais, ir su priešiškais klientais — sprendimai dėl vaikų saugumo nepriklausė nuo to, kuris tėvas malonesnis. Tas pats principas — skiriant išmokas."],
+["Interesantas sako: „kaimynas gauna daugiau, nors jo padėtis geresnė”. Kaip atsakysite?",
+"Dvi dalys: 1) konfidencialumas — kito asmens duomenų atskleisti negalite ir nekomentuosite; 2) pasiūlyti įvertinti paties interesanto situaciją: galbūt jis turi teisę į daugiau paramos rūšių, nei gauna. Jei asmuo įtaria piktnaudžiavimą — jis gali pateikti informaciją raštu, ji bus patikrinta teisės aktų tvarka."],
+["Papasakokite apie klaidą, kurią padarėte, ir ko išmokote.",
+"Rinkitės tikrą, bet ne katastrofišką pavyzdį iš apskaitos ar socialinio darbo: pvz., laiku nepastebėta dokumento klaida ar per vėlai eskaluota problema. Struktūra: kas nutiko → kaip ištaisėte → kokį įprotį susikūrėte, kad nepasikartotų (kontrolinis sąrašas, „keturių akių” principas). Venkite „nedarau klaidų” — komisijai tai skamba nepatikimai."],
+["Kaip planuojate tobulėti šioje srityje?",
+"Konkretūs žingsniai: išmanyti visą PSPNGĮ ir poįstatyminius aktus, sekti SADM išaiškinimus ir teisės aktų pakeitimus, dalyvauti mokymuose (skelbime žadami mokymai ir mentorystė), ilgainiui — gilintis į sudėtingesnes sritis (išieškojimai, ES piliečių atvejai). Parodykite, kad mokymasis jums įprastas: apskaitoje teisės aktai keisdavosi kasmet."],
+["Kodėl turėtume pasirinkti būtent Jus?",
+"Jūsų uždarymo kalba (30 sek.): „Turiu retą derinį — 5 metus apskaitos, kur išmokau dirbti tiksliai su skaičiais, dokumentais ir terminais, ir 3,5 metų darbo su rizikos šeimomis, kur išmokau bendrauti su žmonėmis krizėje ir vertinti realias gyvenimo sąlygas. Ši pareigybė reikalauja būtent abiejų pusių: tikslaus administravimo ir pagarbaus darbo su žmonėmis. Esu pasirengusi (-ęs) dirbti nuo pirmos dienos.”"]
 ];
 let commDone=store.get('comm',{});
 const commbox=document.getElementById('commbox');
@@ -873,6 +1021,39 @@ COMM.forEach((c,i)=>{
   const m=document.createElement('div');m.className='model';m.textContent=c[1];d.appendChild(m);
   sb.addEventListener('click',()=>{m.classList.toggle('show');sb.textContent=m.classList.contains('show')?'Slėpti planą':'Rodyti atsakymo planą'});
   commbox.appendChild(d);
+});
+
+/* ---------- interview simulation ---------- */
+const simbox=document.getElementById('simbox'),simStartBtn=document.getElementById('simStart');
+let simSet=[],simIdx=0;
+function simRender(){
+  simbox.innerHTML='';
+  if(!simSet.length)return;
+  if(simIdx>=simSet.length){
+    simbox.innerHTML='<h3>Simuliacija baigta 🎉</h3><p>Atsakėte į '+simSet.length+' klausimų. Jei kurie atsakymai strigo — susiraskite juos sąraše žemiau ir pasižymėkite pakartojimui.</p>';
+    simStartBtn.textContent='Kartoti su naujais klausimais';
+    return;
+  }
+  const ci=simSet[simIdx];
+  const h=document.createElement('h3');h.textContent=(simIdx+1)+' / '+simSet.length+': '+COMM[ci][0];
+  simbox.appendChild(h);
+  const m=document.createElement('div');m.className='model';m.textContent=COMM[ci][1];
+  const row=document.createElement('div');row.className='qnav';
+  const show=document.createElement('button');show.className='btn secondary';show.textContent='Rodyti planą';
+  show.addEventListener('click',()=>{m.classList.toggle('show');show.textContent=m.classList.contains('show')?'Slėpti planą':'Rodyti planą'});
+  const next=document.createElement('button');next.className='btn';
+  next.textContent=simIdx===simSet.length-1?'Baigti':'Kitas klausimas →';
+  next.addEventListener('click',()=>{simIdx++;simRender()});
+  row.appendChild(show);row.appendChild(next);
+  simbox.appendChild(m);simbox.appendChild(row);
+}
+simStartBtn.addEventListener('click',()=>{
+  const idx=COMM.map((_,i)=>i);
+  for(let i=idx.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[idx[i],idx[j]]=[idx[j],idx[i]]}
+  simSet=idx.slice(0,8);simIdx=0;
+  simStartBtn.textContent='Pradėti iš naujo';
+  simRender();
+  window.scrollTo({top:0});
 });
 
 /* ---------- plan ---------- */
