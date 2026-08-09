@@ -1,3 +1,6 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#0E5A6E">
 <title>Konkursui: Socialinių išmokų vyresnysis specialistas · Klaipėda</title>
 <style>
 :root{
@@ -24,7 +27,9 @@
 *{box-sizing:border-box}
 html{-webkit-text-size-adjust:100%}
 body{margin:0;background:var(--paper);color:var(--ink);
-  font:16px/1.6 system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif}
+  font:16px/1.6 system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
+  -webkit-tap-highlight-color:transparent}
+button,summary,.flash{touch-action:manipulation}
 h1,h2,h3,h4{font-family:Charter,"Iowan Old Style",Cambria,Georgia,serif;line-height:1.25;text-wrap:balance;margin:0 0 .5em}
 h1{font-size:1.7rem;font-weight:700}
 h2{font-size:1.35rem;color:var(--baltic-deep)}
@@ -105,6 +110,36 @@ footer{border-top:1px solid var(--line);color:var(--muted);font-size:.82rem;padd
 @media (prefers-reduced-motion: no-preference){
   section.panel.active{animation:fade .25s ease}
   @keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+}
+/* ---------- mobile ---------- */
+@media (max-width:640px){
+  body{font-size:15px}
+  .wrap{padding:0 14px}
+  .masthead{padding:18px 0 14px}
+  .masthead p{font-size:.92rem}
+  h1{font-size:1.32rem}
+  h2{font-size:1.18rem}
+  main{padding:16px 14px 70px}
+  .card{padding:14px;border-radius:8px}
+  .grid2{gap:12px}
+  .kv{grid-template-columns:1fr;gap:0}
+  .kv dt{margin-top:8px;font-size:.8rem}
+  .kv dt:first-child{margin-top:0}
+  .tabrow{padding:8px 10px;gap:5px;-webkit-overflow-scrolling:touch}
+  .tab{padding:9px 13px;min-height:40px}
+  details>summary{padding:12px 13px;min-height:44px;align-items:center}
+  details>.body{padding:0 13px 12px}
+  table{font-size:.84rem}
+  th,td{padding:6px 8px}
+  .flash{min-height:170px;padding:20px 14px}
+  .flash .text{font-size:1rem}
+  .btnrow{gap:8px}
+  .btnrow .btn{flex:1 1 auto;min-height:44px;text-align:center}
+  .opt{padding:11px 12px;min-height:44px}
+  .day{padding:11px 12px;gap:10px}
+  .day input{width:20px;height:20px;flex:none}
+  ul,ol{padding-left:1.1em}
+  footer{padding:14px 14px 34px}
 }
 </style>
 
