@@ -68,7 +68,27 @@ either screenshot the note or record the activity separately, otherwise the
 recording arrives context-free and the activity has to be inferred from the
 HR/motion shape alone.
 
+## Phase breakdown (motion-corroborated)
+
+| Phase | Clock | Duration | Pulse mean (range) | SpO2 mean / min | Motion active |
+|---|---|---|---|---|---|
+| Bike cardio | 17:32–18:31 | 59 min | 124 (96–161) | 96.4% / 94% | 46% |
+| Stretching | 18:31–18:35 | 4 min | 100 (76–128) | 95.7% / 93% | 58% |
+| Legs raised | 18:35–18:42 | 6 min | 75 (68–87) | 97.1% / 95% | 4% |
+
+The Motion channel independently confirms the three phases described in the
+app note: active pedalling, a burst through the stretches, then near-total
+stillness once the legs went up.
+
+**Legs raised** is the physiological inverse of standing: it drains the
+lower-body veins toward the chest, raising venous return and stroke volume,
+so fewer beats are needed. Pulse settled at 68–71 bpm — the lowest of the
+session — six minutes after the stretches, with the session's highest mean
+saturation (97.1%). Note this is a post-exercise state, so it is not
+directly comparable to the resting supine baseline of 11 August.
+
 ## Files
 
 - `Checkme O2 Max 603891_20260816173225.csv` — raw export
+- `report.html` — full formatted report with charts (open in a browser)
 - `exertion-2026-08-16.png` — chart (app-style axes: SpO2 70–100)
