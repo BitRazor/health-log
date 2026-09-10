@@ -1,0 +1,387 @@
+<title>Bike Cardio Readout</title>
+<style>
+  :root {
+    --paper:#F4F6F7;
+    --surface:#FFFFFF;
+    --ink:#0F1519;
+    --ink-2:#3A4750;
+    --muted:#63737C;
+    --rule:#DBE3E6;
+    --rule-soft:#E8EDEF;
+    --pulse:#B5283C;
+    --oxygen:#16788A;
+    --good:#1B7048;
+    --band-pulse:rgba(181,40,60,.055);
+    --band-muted:rgba(99,115,124,.10);
+    --band-oxygen:rgba(22,120,138,.085);
+    --grid:rgba(15,21,25,.10);
+
+    --serif:"Iowan Old Style","Palatino Linotype",Palatino,"Book Antiqua",Georgia,serif;
+    --sans:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+    --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,"Liberation Mono",monospace;
+  }
+  @media (prefers-color-scheme:dark){
+    :root:not([data-theme="light"]){
+      --paper:#0C1216;
+      --surface:#141D22;
+      --ink:#E7EEF1;
+      --ink-2:#B4C2C9;
+      --muted:#8698A2;
+      --rule:#25333A;
+      --rule-soft:#1C282E;
+      --pulse:#EA6C81;
+      --oxygen:#48B9CB;
+      --good:#4FC58C;
+      --band-pulse:rgba(234,108,129,.09);
+      --band-muted:rgba(134,152,162,.10);
+      --band-oxygen:rgba(72,185,203,.11);
+      --grid:rgba(231,238,241,.13);
+    }
+  }
+  :root[data-theme="dark"]{
+    --paper:#0C1216;
+    --surface:#141D22;
+    --ink:#E7EEF1;
+    --ink-2:#B4C2C9;
+    --muted:#8698A2;
+    --rule:#25333A;
+    --rule-soft:#1C282E;
+    --pulse:#EA6C81;
+    --oxygen:#48B9CB;
+    --good:#4FC58C;
+    --band-pulse:rgba(234,108,129,.09);
+    --band-muted:rgba(134,152,162,.10);
+    --band-oxygen:rgba(72,185,203,.11);
+    --grid:rgba(231,238,241,.13);
+  }
+
+  *{box-sizing:border-box;}
+  body{
+    background:var(--paper);
+    color:var(--ink);
+    font-family:var(--sans);
+    font-size:16px;
+    line-height:1.6;
+    margin:0;
+    padding:clamp(1.5rem,4vw,3.5rem) clamp(1rem,4vw,2rem) 4rem;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:62rem;margin:0 auto;display:flex;flex-direction:column;gap:3rem;}
+
+  .eyebrow{
+    font-family:var(--mono);
+    font-size:.72rem;
+    letter-spacing:.14em;
+    text-transform:uppercase;
+    color:var(--muted);
+    margin:0;
+  }
+
+  /* ---- masthead ---- */
+  header{display:flex;flex-direction:column;gap:1rem;}
+  h1{
+    font-family:var(--serif);
+    font-weight:600;
+    font-size:clamp(2.1rem,5.2vw,3.1rem);
+    line-height:1.08;
+    letter-spacing:-.015em;
+    margin:0;
+    text-wrap:balance;
+  }
+  .note{
+    font-family:var(--serif);
+    font-style:italic;
+    font-size:1.18rem;
+    line-height:1.5;
+    color:var(--ink-2);
+    border-left:2px solid var(--pulse);
+    padding:.1rem 0 .1rem 1rem;
+    margin:0;
+    max-width:36rem;
+  }
+  .note cite{display:block;font-style:normal;font-family:var(--mono);font-size:.7rem;
+    letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-top:.6rem;}
+  .facts{
+    display:flex;flex-wrap:wrap;gap:.4rem 1.6rem;
+    font-family:var(--mono);font-size:.78rem;color:var(--muted);
+    border-top:1px solid var(--rule);padding-top:1rem;
+  }
+  .facts b{color:var(--ink-2);font-weight:500;}
+
+  /* ---- verdict ---- */
+  .verdict{
+    background:var(--surface);
+    border:1px solid var(--rule);
+    border-left:3px solid var(--good);
+    padding:1.6rem 1.75rem;
+    display:flex;flex-direction:column;gap:.7rem;
+  }
+  .verdict p{
+    margin:0;font-family:var(--serif);font-size:1.32rem;line-height:1.45;
+    text-wrap:pretty;
+  }
+  .verdict strong{color:var(--good);font-weight:600;}
+
+  /* ---- stat tiles ---- */
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));gap:1px;
+    background:var(--rule);border:1px solid var(--rule);}
+  .stat{background:var(--surface);padding:1.25rem 1.3rem;display:flex;flex-direction:column;gap:.3rem;}
+  .stat .k{font-family:var(--mono);font-size:.68rem;letter-spacing:.12em;
+    text-transform:uppercase;color:var(--muted);}
+  .stat .v{font-family:var(--mono);font-size:2.1rem;line-height:1;font-variant-numeric:tabular-nums;
+    letter-spacing:-.02em;}
+  .stat .u{font-size:.95rem;color:var(--muted);}
+  .stat .c{font-size:.82rem;color:var(--ink-2);line-height:1.45;}
+  .v-pulse{color:var(--pulse);} .v-ox{color:var(--oxygen);} .v-good{color:var(--good);}
+
+  /* ---- chart ---- */
+  section{display:flex;flex-direction:column;gap:1.1rem;}
+  h2{
+    font-family:var(--serif);font-weight:600;font-size:1.55rem;line-height:1.2;
+    margin:0;letter-spacing:-.01em;text-wrap:balance;
+  }
+  .lede{margin:0;color:var(--ink-2);max-width:42rem;}
+  .chart{border:1px solid var(--rule);background:var(--surface);padding:1.25rem 1rem 1rem;
+    overflow-x:auto;}
+  .chart svg{display:block;width:100%;min-width:34rem;height:auto;}
+  .panel-label{font-family:var(--mono);font-size:.68rem;letter-spacing:.12em;
+    text-transform:uppercase;padding-left:.25rem;margin:0 0 .3rem;}
+  .legend{display:flex;flex-wrap:wrap;gap:.5rem 1.4rem;font-family:var(--mono);
+    font-size:.7rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);
+    padding:.9rem .25rem 0;border-top:1px solid var(--rule-soft);margin-top:.9rem;}
+  .legend span{display:inline-flex;align-items:center;gap:.45rem;}
+  .swatch{width:.85rem;height:.85rem;border:1px solid var(--rule);flex:none;}
+
+  /* ---- table ---- */
+  .tablewrap{overflow-x:auto;border:1px solid var(--rule);background:var(--surface);}
+  table{border-collapse:collapse;width:100%;min-width:38rem;font-size:.9rem;}
+  th,td{padding:.85rem 1rem;text-align:left;border-bottom:1px solid var(--rule-soft);}
+  thead th{font-family:var(--mono);font-size:.66rem;letter-spacing:.11em;text-transform:uppercase;
+    color:var(--muted);font-weight:500;border-bottom:1px solid var(--rule);white-space:nowrap;}
+  tbody tr:last-child td{border-bottom:none;}
+  td.num{font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:nowrap;}
+  .phase-name{display:inline-flex;align-items:center;gap:.55rem;font-weight:600;white-space:nowrap;}
+  .dot{width:.6rem;height:.6rem;flex:none;}
+
+  /* ---- prose blocks ---- */
+  .cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(17rem,1fr));gap:1.75rem;}
+  .cols p{margin:0 0 .8rem;}
+  .cols p:last-child{margin-bottom:0;}
+  h3{font-family:var(--sans);font-size:.95rem;font-weight:650;margin:0 0 .55rem;letter-spacing:.01em;}
+  .caveat{border-top:1px solid var(--rule);padding-top:1.5rem;display:flex;flex-direction:column;gap:1.1rem;}
+  .caveat p{margin:0;font-size:.9rem;color:var(--ink-2);line-height:1.6;}
+  .caveat b{color:var(--ink);font-weight:600;}
+  footer{border-top:1px solid var(--rule);padding-top:1.25rem;font-family:var(--mono);
+    font-size:.7rem;letter-spacing:.06em;color:var(--muted);line-height:1.7;}
+  mark{background:none;color:var(--pulse);font-weight:600;}
+</style>
+
+<div class="wrap">
+
+  <header>
+    <p class="eyebrow">Checkme O2 Max &middot; SN 603891 &middot; 16 August 2026</p>
+    <h1>Bike Cardio Readout</h1>
+    <p class="note">cardio on bike, the some strech and relax after
+      <cite>Session note, recorded in the app</cite></p>
+    <div class="facts">
+      <span><b>17:32:25 &ndash; 18:41:41</b></span>
+      <span>69 min</span>
+      <span><b>2,079</b> samples</span>
+      <span>2 s interval</span>
+      <span>Indoor, seated</span>
+    </div>
+  </header>
+
+  <div class="verdict">
+    <p class="eyebrow">The finding</p>
+    <p>Across 69 minutes that included a <mark>161 bpm</mark> peak, oxygen saturation
+      never left the 93&ndash;98% band and <strong>never once dipped below 90%</strong>.
+      Pulse fell from that peak to 68 bpm within ten minutes.</p>
+  </div>
+
+  <div class="stats">
+    <div class="stat">
+      <span class="k">Peak pulse</span>
+      <span class="v v-pulse">161<span class="u"> bpm</span></span>
+      <span class="c">At 18:18, the hardest effort of the ride.</span>
+    </div>
+    <div class="stat">
+      <span class="k">SpO&#8322; range</span>
+      <span class="v v-ox">93&ndash;98<span class="u"> %</span></span>
+      <span class="c">Whole session, exertion included.</span>
+    </div>
+    <div class="stat">
+      <span class="k">Dips below 90%</span>
+      <span class="v v-good">0</span>
+      <span class="c">Zero seconds spent under the threshold.</span>
+    </div>
+    <div class="stat">
+      <span class="k">Lowest pulse</span>
+      <span class="v">68<span class="u"> bpm</span></span>
+      <span class="c">Legs raised, 21 min after peak.</span>
+    </div>
+  </div>
+
+  <section>
+    <h2>The session, end to end</h2>
+    <p class="lede">Two channels over the full recording. Saturation is drawn on the
+      70&ndash;100 scale the app uses, so the trace reads at the same magnification you
+      see on the phone. The three bands are the phases from the session note &mdash; and
+      the device's own Motion channel confirms them independently.</p>
+
+    <div class="chart">
+      <p class="panel-label" style="color:var(--pulse)">Pulse rate &mdash; bpm</p>
+      <svg viewBox="-44 -14 958 178" role="img"
+           aria-label="Pulse rate over the session: rising to about 130 bpm on the bike with a 161 bpm peak at 18:18, then falling through the stretching phase to 68 bpm with legs raised.">
+        <rect x="0" y="-14" width="767.69" height="178" fill="var(--band-pulse)"/>
+        <rect x="767.69" y="-14" width="51.97" height="178" fill="var(--band-muted)"/>
+        <rect x="819.66" y="-14" width="80.34" height="178" fill="var(--band-oxygen)"/>
+        <g stroke="var(--grid)" stroke-width="1">
+          <line x1="0" y1="150" x2="900" y2="150"/>
+          <line x1="0" y1="103.85" x2="900" y2="103.85"/>
+          <line x1="0" y1="57.69" x2="900" y2="57.69"/>
+          <line x1="0" y1="11.54" x2="900" y2="11.54"/>
+        </g>
+        <g font-family="ui-monospace,Menlo,Consolas,monospace" font-size="10.5"
+           fill="var(--muted)" text-anchor="end">
+          <text x="-9" y="153.5">40</text>
+          <text x="-9" y="107.3">80</text>
+          <text x="-9" y="61.2">120</text>
+          <text x="-9" y="15">160</text>
+        </g>
+        <polyline fill="none" stroke="var(--pulse)" stroke-width="1.4"
+                  stroke-linejoin="round" stroke-linecap="round" points="0.0,65.77 2.17,69.23 4.33,66.92 6.5,64.62 8.66,65.77 10.83,66.92 12.99,71.54 15.16,70.38 17.32,69.23 19.49,64.62 21.66,71.54 23.82,73.85 25.99,77.31 28.15,77.31 30.32,71.54 32.48,69.23 34.65,69.23 36.81,66.92 38.98,70.38 41.15,68.08 43.31,69.23 45.48,66.92 47.64,68.08 49.81,75.0 51.97,75.0 54.14,71.54 56.3,66.92 58.47,64.62 60.64,57.69 62.8,65.77 64.97,66.92 67.13,62.31 69.3,61.15 71.46,61.15 73.63,62.31 75.79,56.54 77.96,55.38 80.13,58.85 82.29,58.85 84.46,54.23 86.62,61.15 88.79,55.38 90.95,55.38 93.12,57.69 95.28,53.08 97.45,57.69 99.62,60.0 101.78,57.69 103.95,55.38 106.11,53.08 108.28,53.08 110.44,55.38 112.61,54.23 114.77,54.23 116.94,57.69 119.1,51.92 121.27,48.46 123.44,49.62 125.6,53.08 127.77,47.31 129.93,48.46 132.1,50.77 134.26,49.62 136.43,58.85 138.59,53.08 140.76,51.92 142.93,55.38 145.09,55.38 147.26,55.38 149.42,55.38 151.59,57.69 153.75,57.69 155.92,56.54 158.08,58.85 160.25,54.23 162.42,53.08 164.58,51.92 166.75,48.46 168.91,53.08 171.08,56.54 173.24,58.85 175.41,55.38 177.57,56.54 179.74,54.23 181.91,50.77 184.07,46.15 186.24,49.62 188.4,45.0 190.57,47.31 192.73,47.31 194.9,47.31 197.06,47.31 199.23,53.08 201.4,53.08 203.56,54.23 205.73,54.23 207.89,48.46 210.06,53.08 212.22,47.31 214.39,43.85 216.55,46.15 218.72,47.31 220.89,49.62 223.05,42.69 225.22,43.85 227.38,41.54 229.55,38.08 231.71,42.69 233.88,43.85 236.04,47.31 238.21,49.62 240.38,50.77 242.54,50.77 244.71,49.62 246.87,56.54 249.04,56.54 251.2,54.23 253.37,56.54 255.53,57.69 257.7,58.85 259.87,56.54 262.03,57.69 264.2,57.69 266.36,55.38 268.53,51.92 270.69,51.92 272.86,54.23 275.02,55.38 277.19,56.54 279.36,57.69 281.52,56.54 283.69,56.54 285.85,56.54 288.02,56.54 290.18,56.54 292.35,53.08 294.51,50.77 296.68,60.0 298.85,57.69 301.01,55.38 303.18,56.54 305.34,62.31 307.51,60.0 309.67,60.0 311.84,58.85 314.0,55.38 316.17,58.85 318.33,53.08 320.5,49.62 322.67,48.46 324.83,48.46 327.0,49.62 329.16,49.62 331.33,42.69 333.49,42.69 335.66,45.0 337.82,45.0 339.99,40.38 342.16,36.92 344.32,39.23 346.49,41.54 348.65,40.38 350.82,45.0 352.98,43.85 355.15,41.54 357.31,47.31 359.48,48.46 361.65,45.0 363.81,42.69 365.98,43.85 368.14,41.54 370.31,43.85 372.47,43.85 374.64,43.85 376.8,43.85 378.97,40.38 381.14,40.38 383.3,40.38 385.47,46.15 387.63,41.54 389.8,40.38 391.96,41.54 394.13,43.85 396.29,43.85 398.46,48.46 400.63,48.46 402.79,48.46 404.96,53.08 407.12,49.62 409.29,50.77 411.45,50.77 413.62,51.92 415.78,50.77 417.95,51.92 420.12,53.08 422.28,56.54 424.45,56.54 426.61,57.69 428.78,56.54 430.94,56.54 433.11,57.69 435.27,60.0 437.44,58.85 439.61,62.31 441.77,61.15 443.94,63.46 446.1,63.46 448.27,54.23 450.43,50.77 452.6,48.46 454.76,48.46 456.93,48.46 459.1,47.31 461.26,51.92 463.43,55.38 465.59,54.23 467.76,54.23 469.92,53.08 472.09,54.23 474.25,50.77 476.42,53.08 478.59,53.08 480.75,54.23 482.92,51.92 485.08,53.08 487.25,50.77 489.41,49.62 491.58,49.62 493.74,51.92 495.91,54.23 498.08,53.08 500.24,48.46 502.41,48.46 504.57,42.69 506.74,42.69 508.9,43.85 511.07,43.85 513.23,42.69 515.4,47.31 517.56,42.69 519.73,45.0 521.9,47.31 524.06,49.62 526.23,49.62 528.39,47.31 530.56,48.46 532.72,48.46 534.89,43.85 537.05,42.69 539.22,45.0 541.39,48.46 543.55,43.85 545.72,50.77 547.88,45.0 550.05,48.46 552.21,45.0 554.38,42.69 556.54,46.15 558.71,45.0 560.88,45.0 563.04,43.85 565.21,43.85 567.37,41.54 569.54,39.23 571.7,41.54 573.87,39.23 576.03,42.69 578.2,43.85 580.37,42.69 582.53,46.15 584.7,47.31 586.86,45.0 589.03,47.31 591.19,46.15 593.36,46.15 595.52,46.15 597.69,36.92 599.86,46.15 602.02,41.54 604.19,40.38 606.35,35.77 608.52,28.85 610.68,27.69 612.85,23.08 615.01,23.08 617.18,15.0 619.35,11.54 621.51,12.69 623.68,18.46 625.84,23.08 628.01,26.54 630.17,28.85 632.34,31.15 634.5,33.46 636.67,38.08 638.84,41.54 641.0,40.38 643.17,42.69 645.33,43.85 647.5,48.46 649.66,54.23 651.83,53.08 653.99,53.08 656.16,53.08 658.33,55.38 660.49,54.23 662.66,55.38 664.82,47.31 666.99,63.46 669.15,51.92 671.32,53.08 673.48,55.38 675.65,57.69 677.82,60.0 679.98,58.85 682.15,69.23 684.31,63.46 686.48,61.15 688.64,61.15 690.81,60.0 692.97,61.15 695.14,60.0 697.31,64.62 699.47,61.15 701.64,64.62 703.8,66.92 705.97,65.77 708.13,66.92 710.3,65.77 712.46,65.77 714.63,64.62 716.79,69.23 718.96,65.77 721.13,66.92 723.29,69.23 725.46,69.23 727.62,69.23 729.79,69.23 731.95,73.85 734.12,78.46 736.28,84.23 738.45,80.77 740.62,73.85 742.78,76.15 744.95,72.69 747.11,75.0 749.28,70.38 751.44,68.08 753.61,68.08 755.77,63.46 757.94,62.31 760.11,62.31 762.27,58.85 764.44,50.77 766.6,47.31 768.77,48.46 770.93,72.69 773.1,72.69 775.26,72.69 777.43,76.15 779.6,75.0 781.76,76.15 783.93,75.0 786.09,81.92 788.26,73.85 790.42,69.23 792.59,72.69 794.75,71.54 796.92,70.38 799.09,70.38 801.25,68.08 803.42,87.69 805.58,92.31 807.75,98.08 809.91,98.08 812.08,98.08 814.24,101.54 816.41,106.15 818.58,99.23 820.74,105.0 822.91,105.0 825.07,103.85 827.24,102.69 829.4,102.69 831.57,96.92 833.73,101.54 835.9,98.08 838.07,102.69 840.23,103.85 842.4,108.46 844.56,109.62 846.73,107.31 848.89,105.0 851.06,106.15 853.22,105.0 855.39,109.62 857.56,113.08 859.72,111.92 861.89,109.62 864.05,109.62 866.22,115.38 868.38,115.38 870.55,114.23 872.71,113.08 874.88,114.23 877.05,114.23 879.21,113.08 881.38,117.69 883.54,116.54 885.71,116.54 887.87,116.54 890.04,115.38 892.2,116.54 894.37,114.23 896.54,116.54 898.7,109.62"/>
+      </svg>
+
+      <p class="panel-label" style="color:var(--oxygen);margin-top:1.1rem;">Oxygen saturation &mdash; %</p>
+      <svg viewBox="-44 -14 958 178" role="img"
+           aria-label="Oxygen saturation over the session, holding a narrow band between 93 and 98 percent throughout, with no dips below 90 percent.">
+        <rect x="0" y="-14" width="767.69" height="178" fill="var(--band-pulse)"/>
+        <rect x="767.69" y="-14" width="51.97" height="178" fill="var(--band-muted)"/>
+        <rect x="819.66" y="-14" width="80.34" height="178" fill="var(--band-oxygen)"/>
+        <g stroke="var(--grid)" stroke-width="1">
+          <line x1="0" y1="150" x2="900" y2="150"/>
+          <line x1="0" y1="100" x2="900" y2="100"/>
+          <line x1="0" y1="0" x2="900" y2="0"/>
+        </g>
+        <line x1="0" y1="50" x2="900" y2="50" stroke="var(--pulse)" stroke-width="1"
+              stroke-dasharray="5 4" opacity=".55"/>
+        <text x="7" y="45" font-family="ui-monospace,Menlo,Consolas,monospace"
+              font-size="8.5" letter-spacing="0.8" fill="var(--pulse)"
+              opacity=".85">90% THRESHOLD &mdash; NEVER CROSSED</text>
+        <g font-family="ui-monospace,Menlo,Consolas,monospace" font-size="10.5"
+           fill="var(--muted)" text-anchor="end">
+          <text x="-9" y="153.5">70</text>
+          <text x="-9" y="103.5">80</text>
+          <text x="-9" y="53.5">90</text>
+          <text x="-9" y="3.5">100</text>
+        </g>
+        <polyline fill="none" stroke="var(--oxygen)" stroke-width="1.4"
+                  stroke-linejoin="round" stroke-linecap="round" points="0.0,15.0 2.17,15.0 4.33,10.0 6.5,15.0 8.66,15.0 10.83,15.0 12.99,15.0 15.16,15.0 17.32,15.0 19.49,15.0 21.66,10.0 23.82,10.0 25.99,10.0 28.15,10.0 30.32,10.0 32.48,15.0 34.65,15.0 36.81,20.0 38.98,10.0 41.15,15.0 43.31,15.0 45.48,15.0 47.64,15.0 49.81,15.0 51.97,15.0 54.14,15.0 56.3,15.0 58.47,20.0 60.64,15.0 62.8,20.0 64.97,15.0 67.13,15.0 69.3,15.0 71.46,20.0 73.63,25.0 75.79,20.0 77.96,25.0 80.13,15.0 82.29,15.0 84.46,20.0 86.62,20.0 88.79,20.0 90.95,20.0 93.12,20.0 95.28,20.0 97.45,20.0 99.62,20.0 101.78,20.0 103.95,20.0 106.11,20.0 108.28,25.0 110.44,20.0 112.61,20.0 114.77,20.0 116.94,20.0 119.1,20.0 121.27,15.0 123.44,15.0 125.6,15.0 127.77,20.0 129.93,15.0 132.1,20.0 134.26,20.0 136.43,20.0 138.59,20.0 140.76,20.0 142.93,20.0 145.09,20.0 147.26,20.0 149.42,20.0 151.59,20.0 153.75,15.0 155.92,15.0 158.08,20.0 160.25,20.0 162.42,20.0 164.58,20.0 166.75,15.0 168.91,20.0 171.08,20.0 173.24,15.0 175.41,20.0 177.57,20.0 179.74,20.0 181.91,20.0 184.07,20.0 186.24,20.0 188.4,20.0 190.57,20.0 192.73,20.0 194.9,20.0 197.06,20.0 199.23,20.0 201.4,20.0 203.56,20.0 205.73,25.0 207.89,20.0 210.06,20.0 212.22,20.0 214.39,20.0 216.55,20.0 218.72,20.0 220.89,20.0 223.05,20.0 225.22,20.0 227.38,20.0 229.55,20.0 231.71,20.0 233.88,20.0 236.04,20.0 238.21,20.0 240.38,20.0 242.54,20.0 244.71,20.0 246.87,20.0 249.04,20.0 251.2,15.0 253.37,20.0 255.53,20.0 257.7,20.0 259.87,20.0 262.03,20.0 264.2,20.0 266.36,20.0 268.53,20.0 270.69,20.0 272.86,20.0 275.02,20.0 277.19,20.0 279.36,15.0 281.52,20.0 283.69,20.0 285.85,20.0 288.02,20.0 290.18,20.0 292.35,20.0 294.51,20.0 296.68,25.0 298.85,20.0 301.01,20.0 303.18,15.0 305.34,20.0 307.51,20.0 309.67,20.0 311.84,20.0 314.0,20.0 316.17,20.0 318.33,20.0 320.5,20.0 322.67,20.0 324.83,20.0 327.0,20.0 329.16,15.0 331.33,15.0 333.49,20.0 335.66,15.0 337.82,15.0 339.99,15.0 342.16,15.0 344.32,20.0 346.49,15.0 348.65,15.0 350.82,15.0 352.98,15.0 355.15,15.0 357.31,15.0 359.48,15.0 361.65,15.0 363.81,15.0 365.98,20.0 368.14,15.0 370.31,20.0 372.47,15.0 374.64,15.0 376.8,20.0 378.97,20.0 381.14,20.0 383.3,15.0 385.47,15.0 387.63,15.0 389.8,15.0 391.96,15.0 394.13,15.0 396.29,15.0 398.46,15.0 400.63,15.0 402.79,20.0 404.96,15.0 407.12,15.0 409.29,15.0 411.45,15.0 413.62,15.0 415.78,15.0 417.95,20.0 420.12,20.0 422.28,25.0 424.45,25.0 426.61,20.0 428.78,20.0 430.94,20.0 433.11,20.0 435.27,20.0 437.44,20.0 439.61,20.0 441.77,20.0 443.94,20.0 446.1,20.0 448.27,15.0 450.43,15.0 452.6,15.0 454.76,15.0 456.93,15.0 459.1,15.0 461.26,20.0 463.43,25.0 465.59,25.0 467.76,20.0 469.92,25.0 472.09,25.0 474.25,20.0 476.42,25.0 478.59,20.0 480.75,20.0 482.92,20.0 485.08,20.0 487.25,20.0 489.41,15.0 491.58,25.0 493.74,20.0 495.91,25.0 498.08,15.0 500.24,15.0 502.41,15.0 504.57,15.0 506.74,15.0 508.9,20.0 511.07,15.0 513.23,15.0 515.4,15.0 517.56,15.0 519.73,20.0 521.9,20.0 524.06,20.0 526.23,15.0 528.39,20.0 530.56,20.0 532.72,20.0 534.89,20.0 537.05,15.0 539.22,15.0 541.39,15.0 543.55,10.0 545.72,15.0 547.88,15.0 550.05,20.0 552.21,20.0 554.38,15.0 556.54,20.0 558.71,20.0 560.88,20.0 563.04,15.0 565.21,20.0 567.37,15.0 569.54,15.0 571.7,15.0 573.87,15.0 576.03,20.0 578.2,20.0 580.37,15.0 582.53,15.0 584.7,15.0 586.86,20.0 589.03,20.0 591.19,15.0 593.36,15.0 595.52,15.0 597.69,15.0 599.86,15.0 602.02,15.0 604.19,15.0 606.35,20.0 608.52,15.0 610.68,15.0 612.85,15.0 615.01,20.0 617.18,20.0 619.35,15.0 621.51,15.0 623.68,20.0 625.84,20.0 628.01,15.0 630.17,15.0 632.34,20.0 634.5,15.0 636.67,15.0 638.84,15.0 641.0,15.0 643.17,15.0 645.33,15.0 647.5,15.0 649.66,15.0 651.83,20.0 653.99,15.0 656.16,15.0 658.33,15.0 660.49,15.0 662.66,15.0 664.82,15.0 666.99,15.0 669.15,20.0 671.32,20.0 673.48,20.0 675.65,15.0 677.82,15.0 679.98,15.0 682.15,20.0 684.31,15.0 686.48,15.0 688.64,15.0 690.81,15.0 692.97,15.0 695.14,15.0 697.31,15.0 699.47,15.0 701.64,15.0 703.8,15.0 705.97,15.0 708.13,15.0 710.3,15.0 712.46,15.0 714.63,15.0 716.79,15.0 718.96,20.0 721.13,20.0 723.29,20.0 725.46,20.0 727.62,20.0 729.79,20.0 731.95,20.0 734.12,20.0 736.28,20.0 738.45,15.0 740.62,20.0 742.78,20.0 744.95,20.0 747.11,15.0 749.28,15.0 751.44,15.0 753.61,15.0 755.77,15.0 757.94,15.0 760.11,15.0 762.27,15.0 764.44,15.0 766.6,15.0 768.77,15.0 770.93,15.0 773.1,30.0 775.26,25.0 777.43,25.0 779.6,20.0 781.76,25.0 783.93,30.0 786.09,30.0 788.26,30.0 790.42,25.0 792.59,25.0 794.75,20.0 796.92,20.0 799.09,20.0 801.25,20.0 803.42,15.0 805.58,15.0 807.75,20.0 809.91,20.0 812.08,20.0 814.24,20.0 816.41,15.0 818.58,15.0 820.74,15.0 822.91,15.0 825.07,15.0 827.24,15.0 829.4,15.0 831.57,15.0 833.73,15.0 835.9,15.0 838.07,15.0 840.23,15.0 842.4,15.0 844.56,10.0 846.73,10.0 848.89,10.0 851.06,10.0 853.22,10.0 855.39,15.0 857.56,15.0 859.72,15.0 861.89,15.0 864.05,15.0 866.22,15.0 868.38,15.0 870.55,15.0 872.71,15.0 874.88,15.0 877.05,20.0 879.21,20.0 881.38,25.0 883.54,20.0 885.71,10.0 887.87,10.0 890.04,10.0 892.2,10.0 894.37,10.0 896.54,15.0 898.7,15.0"/>
+        <g font-family="ui-monospace,Menlo,Consolas,monospace" font-size="10.5"
+           fill="var(--muted)" text-anchor="middle">
+          <text x="98.53" y="172">17:40</text>
+          <text x="228.46" y="172">17:50</text>
+          <text x="358.40" y="172">18:00</text>
+          <text x="488.33" y="172">18:10</text>
+          <text x="618.26" y="172">18:20</text>
+          <text x="748.20" y="172">18:30</text>
+          <text x="878.13" y="172">18:40</text>
+        </g>
+      </svg>
+
+      <div class="legend">
+        <span><i class="swatch" style="background:var(--band-pulse)"></i>Bike cardio</span>
+        <span><i class="swatch" style="background:var(--band-muted)"></i>Stretching</span>
+        <span><i class="swatch" style="background:var(--band-oxygen)"></i>Legs raised</span>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Phase by phase</h2>
+    <div class="tablewrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Phase</th><th>Clock</th><th>Duration</th>
+            <th>Pulse mean</th><th>Pulse range</th><th>SpO&#8322; mean</th>
+            <th>SpO&#8322; min</th><th>Motion active</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="phase-name"><i class="dot" style="background:var(--pulse)"></i>Bike cardio</span></td>
+            <td class="num">17:32&ndash;18:31</td><td class="num">59 min</td>
+            <td class="num">124 bpm</td><td class="num">96&ndash;161</td>
+            <td class="num">96.4%</td><td class="num">94%</td><td class="num">46%</td>
+          </tr>
+          <tr>
+            <td><span class="phase-name"><i class="dot" style="background:var(--muted)"></i>Stretching</span></td>
+            <td class="num">18:31&ndash;18:35</td><td class="num">4 min</td>
+            <td class="num">100 bpm</td><td class="num">76&ndash;128</td>
+            <td class="num">95.7%</td><td class="num">93%</td><td class="num">58%</td>
+          </tr>
+          <tr>
+            <td><span class="phase-name"><i class="dot" style="background:var(--oxygen)"></i>Legs raised</span></td>
+            <td class="num">18:35&ndash;18:42</td><td class="num">6 min</td>
+            <td class="num">75 bpm</td><td class="num">68&ndash;87</td>
+            <td class="num">97.1%</td><td class="num">95%</td><td class="num">4%</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="lede">Motion is the corroboration: 46% active pedalling, a burst to 58%
+      through the stretches, then 4% &mdash; near-total stillness &mdash; once the legs
+      went up. The note and the accelerometer tell the same story without either
+      having seen the other.</p>
+  </section>
+
+  <section>
+    <h2>What the last six minutes show</h2>
+    <div class="cols">
+      <div>
+        <h3>Legs raised is the opposite of standing</h3>
+        <p>Raising the legs drains the lower-body veins toward the chest, so more blood
+          returns to the heart with each beat. The heart moves more per stroke and needs
+          fewer strokes &mdash; which is why the pulse settled at 68&ndash;71 bpm, the
+          lowest reading of the whole session, only six minutes after the stretches.</p>
+        <p>Saturation was also at its best here: a 97.1% mean, the highest of the three
+          phases, touching 98%.</p>
+      </div>
+      <div>
+        <h3>Why a seated hour is worth noting</h3>
+        <p>A stationary bike carries no postural load. The whole hour of effort happened
+          without the gravity component that drives the standing pulse rise recorded on
+          11 August, so these numbers are a clean exertion response with posture removed.</p>
+        <p>That also means this session says nothing about the orthostatic picture in
+          either direction &mdash; it measures a different axis.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="caveat">
+    <p><b>On the protocol.</b> An hour held between 120 and 160 bpm is vigorous, and the
+      seated modality does not change that. The 13 August running note designates
+      Sunday 16 August as light walking only inside the fasting scoring window, with
+      training resuming Tuesday 18 August. Worth annotating in the fast's log so the
+      endpoint is not read as confounded silently.</p>
+    <p><b>On the stop.</b> The pre-registered prediction &mdash; effort is low risk, the
+      stop is the risk window &mdash; survives this session untouched. Pulse came down
+      as a taper rather than a cliff, and the minutes after the effort carried the
+      highest saturations of the recording.</p>
+    <p><b>On capture.</b> The app's note field never reaches the CSV export, which
+      carries four columns only: time, oxygen level, pulse rate, motion. Activity
+      context has to be captured separately or it is lost to any later analysis.</p>
+    <p><b>Not a diagnosis.</b> A single home recording from a consumer fingertip
+      oximeter, subject to a &plusmn;2% device accuracy. It is a data point for a
+      clinician, not a clinical conclusion.</p>
+  </section>
+
+  <footer>
+    Source: Checkme O2 Max 603891_20260816173225.csv &middot; 2,079 valid samples at 2 s
+    &middot; phase boundaries derived from the session note and the Motion channel<br>
+    Analysis committed to health-log / oximetry / 2026-08-16-exertion
+  </footer>
+
+</div>
